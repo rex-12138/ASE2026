@@ -1,0 +1,120 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.5.2 Chrome/142.0.7444.265 Electron/39.6.1 Safari/537.36" version="29.5.2">
+  <diagram id="thesis_fig_complex" name="3.2.1快速粗粒度过滤-带数据">
+    <mxGraphModel dx="1554" dy="922" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="G1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8f9fa;strokeColor=#b8bfc6;dashed=1;verticalAlign=top;align=left;spacingLeft=15;spacingTop=10;fontStyle=1;fontColor=#333333;fontSize=14;" value="" vertex="1">
+          <mxGeometry height="240" width="700" x="20" y="18" as="geometry" />
+        </mxCell>
+        <mxCell id="G2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8f9fa;strokeColor=#b8bfc6;dashed=1;verticalAlign=top;align=left;spacingLeft=15;spacingTop=10;fontStyle=1;fontColor=#333333;fontSize=14;" value="" vertex="1">
+          <mxGeometry height="238" width="380" x="740" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="G3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8f9fa;strokeColor=#b8bfc6;dashed=1;verticalAlign=top;align=left;spacingLeft=15;spacingTop=10;fontStyle=1;fontColor=#333333;fontSize=14;" value="" vertex="1">
+          <mxGeometry height="210" width="1100" x="20" y="280" as="geometry" />
+        </mxCell>
+        <mxCell id="N1_Title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=1" value="&lt;font style=&quot;font-size: 13px;&quot;&gt;原始构建日志 L&lt;/font&gt;" vertex="1">
+          <mxGeometry height="20" width="120" x="100" y="27" as="geometry" />
+        </mxCell>
+        <mxCell id="N1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;align=left;verticalAlign=top;spacing=5;" value="&lt;div style=&quot;font-family: Consolas, monospace; line-height: 1.4; font-size: 11px;&quot;&gt;&lt;font color=&quot;#999999&quot;&gt;line-1: [ 0s] Memory limit set to 544...&lt;br&gt;line-2: [ 0s] Using BUILD_ROOT=/var/...&lt;/font&gt;&lt;br&gt;&lt;font color=&quot;#666666&quot;&gt;...&lt;/font&gt;&lt;br&gt;line-471: [322s] installing libgcrypt...&lt;br&gt;&lt;font color=&quot;#666666&quot;&gt;...&lt;/font&gt;&lt;br&gt;&lt;font color=&quot;#cc0000&quot;&gt;line-998: error: &#39;GCRY_MD_SM3&#39; undeclared&lt;/font&gt;&lt;br&gt;&lt;font color=&quot;#666666&quot;&gt;...&lt;/font&gt;&lt;br&gt;&lt;font color=&quot;#cc0000&quot;&gt;line-1021: RPM build errors:&lt;/font&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="197" width="240" x="40" y="50" as="geometry" />
+        </mxCell>
+        <mxCell id="N2" parent="1" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;fillColor=#ffe6cc;strokeColor=#d79b00;size=15;" value="" vertex="1">
+          <mxGeometry height="97" width="150" x="310" y="82" as="geometry" />
+        </mxCell>
+        <mxCell id="N3_Title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=1" value="&lt;font style=&quot;font-size: 13px;&quot;&gt;过滤后的日志 L&#39;&lt;/font&gt;" vertex="1">
+          <mxGeometry height="20" width="120" x="529" y="38" as="geometry" />
+        </mxCell>
+        <mxCell id="N3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=light-dark(#f5f5f5, #392f3f);strokeColor=#9673a6;align=left;verticalAlign=top;spacing=5;" value="&lt;div style=&quot;font-family: Consolas, monospace; line-height: 1.4;&quot;&gt;&lt;font&gt;line-471: [322s] installing libgcrypt...&lt;br&gt;&lt;font color=&quot;#666666&quot;&gt;...&lt;/font&gt;&lt;br&gt;&lt;font color=&quot;#cc0000&quot;&gt;line-998: error: &#39;GCRY_MD_SM3&#39; undeclared&lt;/font&gt;&lt;br&gt;&lt;font color=&quot;#666666&quot;&gt;...&lt;/font&gt;&lt;br&gt;&lt;font color=&quot;#cc0000&quot;&gt;line-1021: RPM build errors:&lt;/font&gt;&lt;/font&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="138" width="210" x="490" y="62" as="geometry" />
+        </mxCell>
+        <mxCell id="N4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" value="&lt;b&gt;&lt;font style=&quot;font-size: 14px;&quot;&gt;分层启发式匹配&lt;/font&gt;&lt;/b&gt;&lt;br&gt;&lt;div style=&quot;text-align: left;&quot;&gt;&lt;font style=&quot;font-size: 13px;&quot;&gt;1. 强错误: error:, fatal:&lt;br&gt;2. 终止符: bad exit status&lt;br&gt;3. 去重与聚合相近报错&lt;/font&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="80" width="150" x="760" y="91" as="geometry" />
+        </mxCell>
+        <mxCell id="N5_Title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=1" value="&lt;font style=&quot;font-size: 13px;&quot;&gt;关键错误行集合 A&lt;/font&gt;" vertex="1">
+          <mxGeometry height="20" width="120" x="957" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="N5" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;align=left;verticalAlign=middle;spacing=5;strokeWidth=2;" value="&lt;div style=&quot;font-family: Consolas, monospace; line-height: 1.4;&quot;&gt;&lt;font color=&quot;#cc0000&quot;&gt;a1 -&amp;gt; line-998: error: &#39;GCRY_MD...&lt;br&gt;&lt;br&gt;a2 -&amp;gt; line-1021: RPM build errors:&lt;/font&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="120" width="160" x="940" y="86.5" as="geometry" />
+        </mxCell>
+        <mxCell id="N6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" value="&lt;div style=&quot;&quot;&gt;&lt;b style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&lt;font style=&quot;font-size: 14px;&quot;&gt;向前/向后窗口扩展&lt;/font&gt;&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;&quot;&gt;&lt;br&gt;&lt;/div&gt;&lt;div style=&quot;&quot;&gt;&lt;font style=&quot;font-size: 13px;&quot;&gt;保留语义完整性&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;&quot;&gt;&lt;font style=&quot;font-size: 13px;&quot;&gt;合并重叠块&lt;/font&gt;&lt;br&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="80" width="180" x="920" y="355" as="geometry" />
+        </mxCell>
+        <mxCell id="N7_Title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=1" value="&lt;font style=&quot;font-size: 13px;&quot;&gt;候选日志块集合 B&lt;/font&gt;" vertex="1">
+          <mxGeometry height="20" width="120" x="621" y="297" as="geometry" />
+        </mxCell>
+        <mxCell id="N7" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=light-dark(#f5f5f5, #392f3f);strokeColor=#9673a6;align=left;verticalAlign=top;spacing=5;" value="&lt;div style=&quot;font-family: Consolas, monospace; line-height: 1.4;&quot;&gt;&lt;font&gt;&lt;b style=&quot;&quot;&gt;Block 1 (L996-L1000):&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#666666&quot;&gt;  static restriction_t rs[] = {&lt;/font&gt;&lt;br&gt;&lt;font color=&quot;#cc0000&quot;&gt;  src/hashsum.c:85:3: error...&lt;/font&gt;&lt;br&gt;&lt;font color=&quot;#666666&quot;&gt;  GCRY_MD_SM3,&lt;/font&gt;&lt;br&gt;&lt;br&gt;&lt;b style=&quot;&quot;&gt;Block 2 (L1020-L1024):&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#cc0000&quot;&gt;  RPM build errors:&lt;br&gt;  Bad exit status from...&lt;/font&gt;&lt;/font&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="150" width="220" x="630" y="320" as="geometry" />
+        </mxCell>
+        <mxCell id="N8" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" value="&lt;div style=&quot;&quot;&gt;&lt;b style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&lt;font style=&quot;font-size: 14px;&quot;&gt;日志块重要性打分&lt;/font&gt;&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;&quot;&gt;&lt;br&gt;&lt;/div&gt;&lt;div style=&quot;&quot;&gt;&lt;font style=&quot;font-size: 13px;&quot;&gt;惩罚低密度无关信息&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;&quot;&gt;&lt;font style=&quot;font-size: 13px;&quot;&gt;强制满足Token预算上限&lt;/font&gt;&lt;br&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="90" width="190" x="380" y="350" as="geometry" />
+        </mxCell>
+        <mxCell id="N9_Title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=1" value="&lt;font style=&quot;font-size: 13px;&quot;&gt;筛选结果 (Top-n 高密度块)&lt;/font&gt;" vertex="1">
+          <mxGeometry height="20" width="180" x="70" y="287" as="geometry" />
+        </mxCell>
+        <mxCell id="N9" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=light-dark(#e3f4e2, #1f2f1e);strokeColor=#82b366;strokeWidth=2;align=center;verticalAlign=middle;" value="&lt;div style=&quot;line-height: 1.5; text-align: center;&quot;&gt;&lt;font style=&quot;&quot;&gt;&lt;b style=&quot;&quot;&gt;&lt;font style=&quot;font-size: 14px;&quot;&gt;局部错误上下文&lt;/font&gt;&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#666666&quot; style=&quot;font-size: 13px;&quot;&gt;[供下一阶段实体回溯使用]&lt;/font&gt;&lt;br&gt;&lt;br&gt;&lt;/font&gt;&lt;div style=&quot;border: 2px solid rgb(184, 84, 80); background: rgb(248, 206, 204); padding: 4px;&quot;&gt;&lt;font style=&quot;font-size: 13px;&quot;&gt;Score: 0.92 (Block 1)&lt;/font&gt;&lt;/div&gt;&lt;font style=&quot;font-size: 13px;&quot;&gt;......&lt;br&gt;&lt;/font&gt;&lt;div style=&quot;border: 2px solid rgb(184, 84, 80); background: rgb(248, 206, 204); padding: 4px;&quot;&gt;&lt;font style=&quot;font-size: 13px;&quot;&gt;Score: 0.85 (Block n)&lt;/font&gt;&lt;/div&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="169" width="210" x="50" y="310" as="geometry" />
+        </mxCell>
+        <mxCell id="E1" edge="1" parent="1" source="N1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeWidth=2;strokeColor=#666666;" target="N2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E2" edge="1" parent="1" source="N2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeWidth=2;strokeColor=#666666;" target="N3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E3" edge="1" parent="1" source="N3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeWidth=2;strokeColor=#666666;" target="N4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E4" edge="1" parent="1" source="N4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeWidth=2;strokeColor=#666666;" target="N5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E5" edge="1" parent="1" source="N5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeWidth=2;strokeColor=#388e3c;fontColor=#388e3c;fontStyle=1" target="N6" value="&lt;font style=&quot;font-size: 12px;&quot;&gt;传入关键行行号索引&lt;/font&gt;">
+          <mxGeometry relative="1" x="-0.1576" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="1020" y="260" />
+              <mxPoint x="1010" y="260" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="E5_2" edge="1" parent="1" source="N3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeWidth=2;strokeColor=#388e3c;dashed=1;" target="N7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E6" edge="1" parent="1" source="N6" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=0;exitY=0.5;entryX=1;entryY=0.5;strokeWidth=2;strokeColor=#666666;" target="N7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E7" edge="1" parent="1" source="N7" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=0;exitY=0.5;entryX=1;entryY=0.5;strokeWidth=2;strokeColor=#666666;" target="N8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E8" edge="1" parent="1" source="N8" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=0;exitY=0.5;entryX=1;entryY=0.5;strokeWidth=2;strokeColor=#666666;fontColor=#666666;verticalAlign=bottom;" target="N9" value="">
+          <mxGeometry relative="1" x="-0.0769" y="-25" as="geometry">
+            <mxPoint x="-25" y="25" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Ggm9za7cBopsLDOqNrHN-3" parent="1" style="text;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;rounded=1;fontSize=14;fontFamily=Helvetica;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" value="&lt;b&gt;&lt;font style=&quot;font-size: 16px;&quot;&gt;规则化预过滤&lt;/font&gt;&lt;/b&gt;" vertex="1">
+          <mxGeometry height="30" width="130" x="322.5" y="3" as="geometry" />
+        </mxCell>
+        <mxCell id="Ggm9za7cBopsLDOqNrHN-4" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=14;" value="&lt;b&gt;&lt;font&gt;匹配冗余规则&lt;/font&gt;&lt;/b&gt;" vertex="1">
+          <mxGeometry height="30" width="115" x="327.5" y="85" as="geometry" />
+        </mxCell>
+        <mxCell id="Ggm9za7cBopsLDOqNrHN-5" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="&lt;font style=&quot;font-size: 13px;&quot;&gt;去除冗余报告&lt;/font&gt;" vertex="1">
+          <mxGeometry height="30" width="110" x="330" y="108" as="geometry" />
+        </mxCell>
+        <mxCell id="Ggm9za7cBopsLDOqNrHN-6" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="&lt;font style=&quot;font-size: 13px;&quot;&gt;去除平台模板化提示&lt;/font&gt;" vertex="1">
+          <mxGeometry height="30" width="120" x="325" y="143.5" as="geometry" />
+        </mxCell>
+        <mxCell id="Ggm9za7cBopsLDOqNrHN-7" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="&lt;font style=&quot;font-size: 13px;&quot;&gt;去除统计信息&lt;/font&gt;" vertex="1">
+          <mxGeometry height="30" width="110" x="330" y="126.5" as="geometry" />
+        </mxCell>
+        <mxCell id="Ggm9za7cBopsLDOqNrHN-10" parent="1" style="text;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;rounded=1;fontSize=14;fontFamily=Helvetica;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" value="&lt;b&gt;&lt;font style=&quot;font-size: 16px;&quot;&gt;关键错误行匹配&lt;/font&gt;&lt;/b&gt;" vertex="1">
+          <mxGeometry height="30" width="130" x="865" y="8" as="geometry" />
+        </mxCell>
+        <mxCell id="Ggm9za7cBopsLDOqNrHN-11" parent="1" style="text;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;rounded=1;fontSize=14;fontFamily=Helvetica;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" value="&lt;b&gt;&lt;font style=&quot;font-size: 16px;&quot;&gt;上下文扩展与筛选&lt;/font&gt;&lt;/b&gt;" vertex="1">
+          <mxGeometry height="30" width="150" x="440" y="265" as="geometry" />
+        </mxCell>
+        <mxCell id="Ggm9za7cBopsLDOqNrHN-13" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="&lt;font style=&quot;font-size: 13px;&quot;&gt;执行排序与截断&lt;/font&gt;" vertex="1">
+          <mxGeometry height="30" width="100" x="274" y="399" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

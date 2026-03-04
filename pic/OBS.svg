@@ -1,0 +1,165 @@
+<svg width="936" height="831" viewBox="0 0 702 623.25" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="translate(4.808219178082192,611.7780785234006) scale(1.202054794520548)">
+<title>G</title>
+<polygon fill="white" stroke="none" points="-4,4 -4,-503.4 580,-503.4 580,4 -4,4"/>
+<g id="clust1" class="cluster">
+<title>cluster_pipeline</title>
+<polygon fill="none" stroke="#999999" stroke-dasharray="5,2" points="190,-8 190,-491.4 386,-491.4 386,-8 190,-8"/>
+<text text-anchor="middle" x="288" y="-474.8" font-family="Times,serif" font-size="14.00">OBS 构建流水线阶段</text>
+</g>
+<!-- Unpack -->
+<g id="node1" class="node">
+<title>Unpack</title>
+<path fill="#e1f5fe" stroke="#0288d1" d="M366,-458.6C366,-458.6 210,-458.6 210,-458.6 204,-458.6 198,-452.6 198,-446.6 198,-446.6 198,-434.6 198,-434.6 198,-428.6 204,-422.6 210,-422.6 210,-422.6 366,-422.6 366,-422.6 372,-422.6 378,-428.6 378,-434.6 378,-434.6 378,-446.6 378,-446.6 378,-452.6 372,-458.6 366,-458.6"/>
+<text text-anchor="middle" x="288" y="-436.4" font-family="Microsoft YaHei" font-size="14.00">Unpack</text>
+</g>
+<!-- Patch -->
+<g id="node2" class="node">
+<title>Patch</title>
+<path fill="#e1f5fe" stroke="#0288d1" d="M366,-385.6C366,-385.6 210,-385.6 210,-385.6 204,-385.6 198,-379.6 198,-373.6 198,-373.6 198,-361.6 198,-361.6 198,-355.6 204,-349.6 210,-349.6 210,-349.6 366,-349.6 366,-349.6 372,-349.6 378,-355.6 378,-361.6 378,-361.6 378,-373.6 378,-373.6 378,-379.6 372,-385.6 366,-385.6"/>
+<text text-anchor="middle" x="288" y="-363.4" font-family="Microsoft YaHei" font-size="14.00">Patch</text>
+</g>
+<!-- Unpack&#45;&gt;Patch -->
+<g id="edge1" class="edge">
+<title>Unpack-&gt;Patch</title>
+<path fill="none" stroke="#333333" stroke-width="2" d="M288,-422.41C288,-415.26 288,-406.75 288,-398.62"/>
+<polygon fill="#333333" stroke="#333333" stroke-width="2" points="291.5,-398.66 288,-388.66 284.5,-398.66 291.5,-398.66"/>
+</g>
+<!-- Configure -->
+<g id="node3" class="node">
+<title>Configure</title>
+<path fill="#e1f5fe" stroke="#0288d1" d="M366,-312.6C366,-312.6 210,-312.6 210,-312.6 204,-312.6 198,-306.6 198,-300.6 198,-300.6 198,-283 198,-283 198,-277 204,-271 210,-271 210,-271 366,-271 366,-271 372,-271 378,-277 378,-283 378,-283 378,-300.6 378,-300.6 378,-306.6 372,-312.6 366,-312.6"/>
+<text text-anchor="middle" x="288" y="-296" font-family="Microsoft YaHei" font-size="14.00">Configure</text>
+<text text-anchor="middle" x="288" y="-279.2" font-family="Microsoft YaHei" font-size="14.00">(配置/环境探测)</text>
+</g>
+<!-- Patch&#45;&gt;Configure -->
+<g id="edge2" class="edge">
+<title>Patch-&gt;Configure</title>
+<path fill="none" stroke="#333333" stroke-width="2" d="M288,-349.11C288,-342.17 288,-333.96 288,-325.98"/>
+<polygon fill="#333333" stroke="#333333" stroke-width="2" points="291.5,-326.06 288,-316.06 284.5,-326.06 291.5,-326.06"/>
+</g>
+<!-- Implicit1 -->
+<g id="node7" class="node">
+<title>Implicit1</title>
+<path fill="none" stroke="#f57c00" stroke-dasharray="5,2" d="M564,-312.6C564,-312.6 408,-312.6 408,-312.6 402,-312.6 396,-306.6 396,-300.6 396,-300.6 396,-283 396,-283 396,-277 402,-271 408,-271 408,-271 564,-271 564,-271 570,-271 576,-277 576,-283 576,-283 576,-300.6 576,-300.6 576,-306.6 570,-312.6 564,-312.6"/>
+<text text-anchor="middle" x="486" y="-296" font-family="Microsoft YaHei" font-size="14.00">隐性故障</text>
+<text text-anchor="middle" x="486" y="-279.2" font-family="Microsoft YaHei" font-size="14.00">(补丁不兼容/偏移)</text>
+</g>
+<!-- Patch&#45;&gt;Implicit1 -->
+<g id="edge6" class="edge">
+<title>Patch-&gt;Implicit1</title>
+<path fill="none" stroke="#f57c00" stroke-dasharray="1,5" d="M334.92,-349.11C360.68,-339.51 393.01,-327.46 421.15,-316.97"/>
+<polygon fill="#f57c00" stroke="#f57c00" points="422.14,-320.34 430.29,-313.57 419.69,-313.78 422.14,-320.34"/>
+</g>
+<!-- Compile -->
+<g id="node4" class="node">
+<title>Compile</title>
+<path fill="#e1f5fe" stroke="#0288d1" d="M366,-234C366,-234 210,-234 210,-234 204,-234 198,-228 198,-222 198,-222 198,-204.4 198,-204.4 198,-198.4 204,-192.4 210,-192.4 210,-192.4 366,-192.4 366,-192.4 372,-192.4 378,-198.4 378,-204.4 378,-204.4 378,-222 378,-222 378,-228 372,-234 366,-234"/>
+<text text-anchor="middle" x="288" y="-217.4" font-family="Microsoft YaHei" font-size="14.00">Compile</text>
+<text text-anchor="middle" x="288" y="-200.6" font-family="Microsoft YaHei" font-size="14.00">(编译与链接)</text>
+</g>
+<!-- Configure&#45;&gt;Compile -->
+<g id="edge3" class="edge">
+<title>Configure-&gt;Compile</title>
+<path fill="none" stroke="#333333" stroke-width="2" d="M288,-270.67C288,-263.52 288,-255.26 288,-247.31"/>
+<polygon fill="#333333" stroke="#333333" stroke-width="2" points="291.5,-247.48 288,-237.48 284.5,-247.48 291.5,-247.48"/>
+</g>
+<!-- Implicit2 -->
+<g id="node8" class="node">
+<title>Implicit2</title>
+<path fill="none" stroke="#f57c00" stroke-dasharray="5,2" d="M168,-234C168,-234 12,-234 12,-234 6,-234 0,-228 0,-222 0,-222 0,-204.4 0,-204.4 0,-198.4 6,-192.4 12,-192.4 12,-192.4 168,-192.4 168,-192.4 174,-192.4 180,-198.4 180,-204.4 180,-204.4 180,-222 180,-222 180,-228 174,-234 168,-234"/>
+<text text-anchor="middle" x="90" y="-217.4" font-family="Microsoft YaHei" font-size="14.00">隐性故障</text>
+<text text-anchor="middle" x="90" y="-200.6" font-family="Microsoft YaHei" font-size="14.00">(依赖探测失败/特性降级)</text>
+</g>
+<!-- Configure&#45;&gt;Implicit2 -->
+<g id="edge7" class="edge">
+<title>Configure-&gt;Implicit2</title>
+<path fill="none" stroke="#f57c00" stroke-dasharray="1,5" d="M235.72,-270.57C210.23,-260.71 179.38,-248.78 152.64,-238.43"/>
+<polygon fill="#f57c00" stroke="#f57c00" points="154.23,-235.3 143.64,-234.95 151.71,-241.82 154.23,-235.3"/>
+</g>
+<!-- Install -->
+<g id="node5" class="node">
+<title>Install</title>
+<path fill="#e1f5fe" stroke="#0288d1" d="M366,-141.6C366,-141.6 210,-141.6 210,-141.6 204,-141.6 198,-135.6 198,-129.6 198,-129.6 198,-117.6 198,-117.6 198,-111.6 204,-105.6 210,-105.6 210,-105.6 366,-105.6 366,-105.6 372,-105.6 378,-111.6 378,-117.6 378,-117.6 378,-129.6 378,-129.6 378,-135.6 372,-141.6 366,-141.6"/>
+<text text-anchor="middle" x="288" y="-119.4" font-family="Microsoft YaHei" font-size="14.00">Install</text>
+</g>
+<!-- Compile&#45;&gt;Install -->
+<g id="edge4" class="edge">
+<title>Compile-&gt;Install</title>
+<path fill="none" stroke="#333333" stroke-width="2" d="M288,-192.32C288,-181.2 288,-167.11 288,-154.67"/>
+<polygon fill="#333333" stroke="#333333" stroke-width="2" points="291.5,-155.06 288,-145.06 284.5,-155.06 291.5,-155.06"/>
+</g>
+<!-- Explicit1 -->
+<g id="node9" class="node">
+<title>Explicit1</title>
+<path fill="#ffebee" stroke="#d32f2f" stroke-width="2" d="M564,-144.4C564,-144.4 408,-144.4 408,-144.4 402,-144.4 396,-138.4 396,-132.4 396,-132.4 396,-114.8 396,-114.8 396,-108.8 402,-102.8 408,-102.8 408,-102.8 564,-102.8 564,-102.8 570,-102.8 576,-108.8 576,-114.8 576,-114.8 576,-132.4 576,-132.4 576,-138.4 570,-144.4 564,-144.4"/>
+<text text-anchor="middle" x="486" y="-127.8" font-family="Microsoft YaHei" font-size="14.00">显性报错</text>
+<text text-anchor="middle" x="486" y="-111" font-family="Microsoft YaHei" font-size="14.00">(语法错误/宏未定义)</text>
+</g>
+<!-- Compile&#45;&gt;Explicit1 -->
+<g id="edge11" class="edge">
+<title>Compile-&gt;Explicit1</title>
+<path fill="none" stroke="#d32f2f" stroke-width="2" d="M333.43,-192.1C361.34,-179.75 397.4,-163.8 427.45,-150.5"/>
+<polygon fill="#d32f2f" stroke="#d32f2f" stroke-width="2" points="428.57,-153.84 436.3,-146.59 425.74,-147.43 428.57,-153.84"/>
+</g>
+<!-- Explicit2 -->
+<g id="node10" class="node">
+<title>Explicit2</title>
+<path fill="#ffebee" stroke="#d32f2f" stroke-width="2" d="M168,-144.4C168,-144.4 12,-144.4 12,-144.4 6,-144.4 0,-138.4 0,-132.4 0,-132.4 0,-114.8 0,-114.8 0,-108.8 6,-102.8 12,-102.8 12,-102.8 168,-102.8 168,-102.8 174,-102.8 180,-108.8 180,-114.8 180,-114.8 180,-132.4 180,-132.4 180,-138.4 174,-144.4 168,-144.4"/>
+<text text-anchor="middle" x="90" y="-127.8" font-family="Microsoft YaHei" font-size="14.00">显性报错</text>
+<text text-anchor="middle" x="90" y="-111" font-family="Microsoft YaHei" font-size="14.00">(符号未定义/头文件缺失)</text>
+</g>
+<!-- Compile&#45;&gt;Explicit2 -->
+<g id="edge12" class="edge">
+<title>Compile-&gt;Explicit2</title>
+<path fill="none" stroke="#d32f2f" stroke-width="2" d="M242.57,-192.1C214.66,-179.75 178.6,-163.8 148.55,-150.5"/>
+<polygon fill="#d32f2f" stroke="#d32f2f" stroke-width="2" points="150.26,-147.43 139.7,-146.59 147.43,-153.84 150.26,-147.43"/>
+</g>
+<!-- Check -->
+<g id="node6" class="node">
+<title>Check</title>
+<path fill="#e1f5fe" stroke="#0288d1" d="M366,-52C366,-52 210,-52 210,-52 204,-52 198,-46 198,-40 198,-40 198,-28 198,-28 198,-22 204,-16 210,-16 210,-16 366,-16 366,-16 372,-16 378,-22 378,-28 378,-28 378,-40 378,-40 378,-46 372,-52 366,-52"/>
+<text text-anchor="middle" x="288" y="-29.8" font-family="Microsoft YaHei" font-size="14.00">Check</text>
+</g>
+<!-- Install&#45;&gt;Check -->
+<g id="edge5" class="edge">
+<title>Install-&gt;Check</title>
+<path fill="none" stroke="#333333" stroke-width="2" d="M288,-105.29C288,-93.89 288,-78.66 288,-65.29"/>
+<polygon fill="#333333" stroke="#333333" stroke-width="2" points="291.5,-65.3 288,-55.3 284.5,-65.3 291.5,-65.3"/>
+</g>
+<!-- Explicit3 -->
+<g id="node11" class="node">
+<title>Explicit3</title>
+<path fill="#ffebee" stroke="#d32f2f" stroke-width="2" d="M168,-54.8C168,-54.8 12,-54.8 12,-54.8 6,-54.8 0,-48.8 0,-42.8 0,-42.8 0,-25.2 0,-25.2 0,-19.2 6,-13.2 12,-13.2 12,-13.2 168,-13.2 168,-13.2 174,-13.2 180,-19.2 180,-25.2 180,-25.2 180,-42.8 180,-42.8 180,-48.8 174,-54.8 168,-54.8"/>
+<text text-anchor="middle" x="90" y="-38.2" font-family="Microsoft YaHei" font-size="14.00">显性报错</text>
+<text text-anchor="middle" x="90" y="-21.4" font-family="Microsoft YaHei" font-size="14.00">(目标文件/构建产物缺失)</text>
+</g>
+<!-- Install&#45;&gt;Explicit3 -->
+<g id="edge13" class="edge">
+<title>Install-&gt;Explicit3</title>
+<path fill="none" stroke="#d32f2f" stroke-width="2" d="M248.88,-105.29C220.17,-92.59 180.71,-75.13 148.29,-60.79"/>
+<polygon fill="#d32f2f" stroke="#d32f2f" stroke-width="2" points="150.03,-57.73 139.47,-56.89 147.2,-64.13 150.03,-57.73"/>
+</g>
+<!-- Implicit1&#45;&gt;Explicit1 -->
+<g id="edge8" class="edge">
+<title>Implicit1-&gt;Explicit1</title>
+<path fill="none" stroke="#d32f2f" stroke-width="2" stroke-dasharray="5,2" d="M486,-270.75C486,-242.83 486,-191.86 486,-158.11"/>
+<polygon fill="#d32f2f" stroke="#d32f2f" stroke-width="2" points="489.5,-158.27 486,-148.27 482.5,-158.27 489.5,-158.27"/>
+<text text-anchor="middle" x="509.75" y="-210.2" font-family="Microsoft YaHei" font-size="10.00"> 错误隐式传播</text>
+</g>
+<!-- Implicit2&#45;&gt;Explicit2 -->
+<g id="edge9" class="edge">
+<title>Implicit2-&gt;Explicit2</title>
+<path fill="none" stroke="#d32f2f" stroke-width="2" stroke-dasharray="5,2" d="M90,-192.32C90,-182.24 90,-169.71 90,-158.18"/>
+<polygon fill="#d32f2f" stroke="#d32f2f" stroke-width="2" points="93.5,-158.34 90,-148.34 86.5,-158.34 93.5,-158.34"/>
+<text text-anchor="middle" x="125" y="-165.4" font-family="Microsoft YaHei" font-size="10.00"> 跨阶段长程因果依赖</text>
+</g>
+<!-- Explicit2&#45;&gt;Explicit3 -->
+<g id="edge10" class="edge">
+<title>Explicit2-&gt;Explicit3</title>
+<path fill="none" stroke="#d32f2f" stroke-dasharray="5,2" d="M90,-101.84C90,-91.48 90,-78.71 90,-67.11"/>
+<polygon fill="#d32f2f" stroke="#d32f2f" points="93.5,-67.12 90,-57.12 86.5,-67.12 93.5,-67.12"/>
+<text text-anchor="middle" x="106.25" y="-75.8" font-family="Microsoft YaHei" font-size="10.00"> 级联失败</text>
+</g>
+</g>
+</svg>

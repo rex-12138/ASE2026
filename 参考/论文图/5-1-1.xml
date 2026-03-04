@@ -1,0 +1,100 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.5.2 Chrome/142.0.7444.265 Electron/39.6.1 Safari/537.36" version="29.5.2">
+  <diagram id="5u_cM8GkoV4b6uFwGUDJ" name="第 1 页">
+    <mxGraphModel dx="1295" dy="768" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1000" pageHeight="600" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" value="&lt;b style=&quot;font-size: 24px; color: #333333;&quot;&gt;RISC-V软件包构建失败分析系统需求&lt;/b&gt;" vertex="1">
+          <mxGeometry height="40" width="480" x="240" y="70" as="geometry" />
+        </mxCell>
+        <mxCell id="title_line" edge="1" parent="1" style="endArrow=none;html=1;strokeWidth=1;strokeColor=#B3B3B3;">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="200" y="120" as="sourcePoint" />
+            <mxPoint x="760" y="120" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="input_box" parent="1" style="swimlane;whiteSpace=wrap;html=1;startSize=40;fillColor=#5b9bd5;fontColor=#ffffff;strokeColor=#41719c;rounded=1;arcSize=15;fontStyle=1;fontSize=18;" value="输入" vertex="1">
+          <mxGeometry height="230" width="160" x="30" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="in_1" parent="input_box" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontColor=#333333;" value="&lt;span style=&quot;font-size: 20px;&quot;&gt;📄&lt;/span&gt;&lt;span style=&quot;padding-left: 10px;&quot;&gt;构建日志&lt;/span&gt;" vertex="1">
+          <mxGeometry height="40" width="130" x="17" y="61" as="geometry" />
+        </mxCell>
+        <mxCell id="in_2" parent="input_box" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontColor=#333333;" value="&lt;span style=&quot;font-size: 20px;&quot;&gt;⚙️&lt;/span&gt;&lt;span style=&quot;padding-left: 10px;&quot;&gt;Spec文件&lt;/span&gt;" vertex="1">
+          <mxGeometry height="40" width="130" x="15" y="112" as="geometry" />
+        </mxCell>
+        <mxCell id="in_4" parent="input_box" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontColor=#333333;" value="&lt;span style=&quot;font-size: 20px;&quot;&gt;👤&lt;/span&gt;&lt;span style=&quot;padding-left: 10px;&quot;&gt;用户说明&lt;/span&gt;" vertex="1">
+          <mxGeometry height="40" width="130" x="18" y="164" as="geometry" />
+        </mxCell>
+        <mxCell id="main_arr_1" edge="1" parent="1" style="endArrow=classic;html=1;strokeWidth=4;strokeColor=#5b9bd5;fillColor=#5b9bd5;edgeStyle=orthogonalEdgeStyle;jumpStyle=none;">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="200" y="270" as="sourcePoint" />
+            <mxPoint x="250" y="270" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="process_box" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eaf2e8;strokeColor=#628b5e;arcSize=8;" value="" vertex="1">
+          <mxGeometry height="200" width="440" x="260" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="process_title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=18;fontColor=#333333;fontStyle=1" value="RCA 分析流程" vertex="1">
+          <mxGeometry height="30" width="160" x="400" y="170" as="geometry" />
+        </mxCell>
+        <mxCell id="process_line" edge="1" parent="1" style="endArrow=none;html=1;strokeWidth=1;strokeColor=#628b5e;">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="280" y="200" as="sourcePoint" />
+            <mxPoint x="680" y="200" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p_1" parent="1" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontColor=#333333;" value="&lt;div style=&quot;font-size: 40px;&quot;&gt;📚&lt;/div&gt;&lt;div style=&quot;font-size: 14px; margin-top: 5px;&quot;&gt;日志压缩&lt;/div&gt;" vertex="1">
+          <mxGeometry height="80" width="80" x="280" y="230" as="geometry" />
+        </mxCell>
+        <mxCell id="p_arr_1" edge="1" parent="1" style="endArrow=classic;html=1;strokeWidth=4;strokeColor=#96c68a;fillColor=#96c68a;edgeStyle=orthogonalEdgeStyle;jumpStyle=none;">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="360" y="270" as="sourcePoint" />
+            <mxPoint x="410" y="270" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p_2" parent="1" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontColor=#333333;" value="&lt;div style=&quot;font-size: 40px;&quot;&gt;🔍&lt;/div&gt;&lt;div style=&quot;font-size: 14px; margin-top: 5px;&quot;&gt;根因分析&lt;/div&gt;" vertex="1">
+          <mxGeometry height="80" width="80" x="430" y="230" as="geometry" />
+        </mxCell>
+        <mxCell id="p_arr_2" edge="1" parent="1" style="endArrow=classic;html=1;strokeWidth=4;strokeColor=#96c68a;fillColor=#96c68a;edgeStyle=orthogonalEdgeStyle;jumpStyle=none;">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="510" y="270" as="sourcePoint" />
+            <mxPoint x="560" y="270" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p_3" parent="1" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontColor=#333333;" value="&lt;div style=&quot;font-size: 40px;&quot;&gt;📝&lt;/div&gt;&lt;div style=&quot;font-size: 14px; margin-top: 5px;&quot;&gt;生成建议&lt;/div&gt;" vertex="1">
+          <mxGeometry height="80" width="80" x="580" y="230" as="geometry" />
+        </mxCell>
+        <mxCell id="main_arr_2" edge="1" parent="1" style="endArrow=classic;html=1;strokeWidth=4;strokeColor=#f68b20;fillColor=#f68b20;edgeStyle=orthogonalEdgeStyle;jumpStyle=none;">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="710" y="270" as="sourcePoint" />
+            <mxPoint x="760" y="270" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="output_box" parent="1" style="swimlane;whiteSpace=wrap;html=1;startSize=40;fillColor=#f08e33;fontColor=#ffffff;strokeColor=#d1711b;rounded=1;arcSize=15;fontStyle=1;fontSize=18;" value="输出" vertex="1">
+          <mxGeometry height="229" width="160" x="770" y="151" as="geometry" />
+        </mxCell>
+        <mxCell id="out_1" parent="output_box" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontColor=#333333;" value="&lt;span style=&quot;font-size: 20px;&quot;&gt;📋&lt;/span&gt;&lt;span style=&quot;padding-left: 10px;&quot;&gt;结构化摘要&lt;/span&gt;" vertex="1">
+          <mxGeometry height="40" width="130" x="18" y="63" as="geometry" />
+        </mxCell>
+        <mxCell id="out_2" parent="output_box" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontColor=#333333;" value="&lt;span style=&quot;font-size: 20px;&quot;&gt;⚠️&lt;/span&gt;&lt;span style=&quot;padding-left: 10px;&quot;&gt;问题结论&lt;/span&gt;" vertex="1">
+          <mxGeometry height="40" width="130" x="16" y="115" as="geometry" />
+        </mxCell>
+        <mxCell id="bot_1" parent="1" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontColor=#333333;" value="&lt;div style=&quot;font-size: 36px;&quot;&gt;🔐&lt;/div&gt;&lt;div style=&quot;font-size: 14px; margin-top: 5px;&quot;&gt;用户认证&lt;/div&gt;" vertex="1">
+          <mxGeometry height="80" width="100" x="210" y="392" as="geometry" />
+        </mxCell>
+        <mxCell id="bot_2" parent="1" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontColor=#333333;" value="&lt;div style=&quot;font-size: 36px;&quot;&gt;🕒&lt;/div&gt;&lt;div style=&quot;font-size: 14px; margin-top: 5px;&quot;&gt;历史查询&lt;/div&gt;" vertex="1">
+          <mxGeometry height="80" width="100" x="350" y="392" as="geometry" />
+        </mxCell>
+        <mxCell id="bot_3" parent="1" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontColor=#333333;" value="&lt;div style=&quot;font-size: 36px;&quot;&gt;🔄&lt;/div&gt;&lt;div style=&quot;font-size: 14px; margin-top: 5px;&quot;&gt;同步 / 异步分析&lt;/div&gt;" vertex="1">
+          <mxGeometry height="80" width="130" x="490" y="392" as="geometry" />
+        </mxCell>
+        <mxCell id="bot_4" parent="1" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontColor=#333333;" value="&lt;div style=&quot;font-size: 36px;&quot;&gt;🧰&lt;/div&gt;&lt;div style=&quot;font-size: 14px; margin-top: 5px;&quot;&gt;工具化调用&lt;/div&gt;" vertex="1">
+          <mxGeometry height="80" width="100" x="660" y="392" as="geometry" />
+        </mxCell>
+        <mxCell id="out_3" parent="1" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontColor=#333333;" value="&lt;span style=&quot;font-size: 20px;&quot;&gt;🛠️&lt;/span&gt;&lt;span style=&quot;padding-left: 10px;&quot;&gt;修复建议&lt;/span&gt;" vertex="1">
+          <mxGeometry height="40" width="130" x="787" y="318" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

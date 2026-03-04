@@ -1,0 +1,30 @@
+# LaTeX 编译产物
+*.aux
+*.log
+*.out
+*.bbl
+*.blg
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.toc
+*.lof
+*.lot
+*.cut
+*.nav
+*.snm
+*.vrb
+
+# 临时/备份文件
+*.bkp
+*.dtmp
+*~
+
+# 编辑器/系统
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# 可选：若不想把生成的 PDF 提交到仓库，取消下面两行注释
+# *.pdf
