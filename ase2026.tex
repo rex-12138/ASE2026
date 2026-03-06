@@ -39,262 +39,266 @@
 %%
 %% Title and author information
 %%
-\title{面向 RISC\,-V 构建失败根因分析的日志压缩与规则学习方法}
+\title{Log Compression and Rule Learning for Root Cause Analysis of RISC\,-V Build Failures}
 
-\author{王泽华}
+\author{Zehua Wang}
 \affiliation{%
-  \institution{中国科学院软件研究所\\中国科学院大学}
-  \country{中国}
+  \institution{Institute of Software, Chinese Academy of Sciences\\University of Chinese Academy of Sciences}
+  \country{China}
 }
 
 \renewcommand{\shortauthors}{Wang}
+
+%% Conference information
+\acmConference[ASE '26]{2026 41st IEEE/ACM International Conference on Automated Software Engineering}{October 12--16, 2026}{Munich, Germany}
+\acmYear{2026}
 
 %%
 %% Abstract
 %%
 \begin{abstract}
-近年来，RISC\,-V 依托开源、模块化与可扩展等特性，正在成为新一代通用与专用处理器的重要架构选择。大量开源软件包被迁移到 RISC\,-V 平台，同时也暴露出构建失败高发、原因复杂且随上游演进不断反复的问题。构建日志往往规模巨大、结构异构且噪声众多，真正决定失败的关键线索常被淹没在不同阶段、相距甚远的输出片段中，传统基于人工经验或规则匹配的排查方式效率低、成本高，难以支撑大规模迁移实践。
+In recent years, RISC\,-V has been rapidly developing, leveraging its openness, modularity, and extensibility, and is becoming an important architectural choice for both general-purpose and domain-specific processors. A large number of open-source software packages are being ported to the RISC\,-V platform, while at the same time revealing frequent and complex build failures that repeatedly occur as upstream evolves. Build logs are often extremely large, structurally heterogeneous, and noisy; the truly decisive clues for failures are usually buried in output segments from different stages that are far apart from each other. Traditional manual investigation or rule-based matching is inefficient and costly, and struggles to support large-scale migration practices.
 
-本文面向 RISC\,-V 软件包构建失败场景，提出一套``日志压缩 + 规则学习''的根因分析方法。首先，设计面向长程因果依赖的多粒度语义日志压缩流程（MGSC），通过显式错误锚点定位、基于实体的跨距离上下文回溯以及轻量语义压缩模型，在严格 \emph{token} 预算下高保真保留与根因相关的关键信息。随后，提出基于历史修复经验的规则学习与根因推理方法（HRL-RCA），从历史修复记录中抽取结构化修复规则，构建按错误类型与构建阶段组织的规则树索引，结合压缩日志摘要进行条件匹配与推理，输出可解释的根因分类与修复建议。
+This paper targets build failures of RISC\,-V software packages and proposes a ``log compression + rule learning''-based method for root cause analysis. First, we design a Multi-Granularity Semantic Compression method (MGSC) oriented to long-range causal dependencies in logs. MGSC performs explicit error anchor localization, entity-based long-distance context backtracking, and lightweight semantic compression under a strict \emph{token} budget, so as to preserve high-fidelity key information that is relevant to the root cause. Then, we propose Historical Rule Learning for Root Cause Analysis (HRL-RCA), which learns structured repair rules from historical fixes, builds a rule-tree index organized by error type and build stage, and combines it with the compressed log summaries to perform conditional matching and reasoning, ultimately outputting interpretable root cause classifications and repair suggestions.
 
-基于来自实际 OBS 生产环境的 RISC\,-V 构建失败数据集的实验结果表明，所提出方法在关键错误行覆盖率、根因识别准确率以及修复建议质量等方面均优于多种基线方法，同时在日志压缩率和推理开销上保持良好平衡。
+Experiments conducted on a RISC\,-V build-failure dataset collected from a real OBS production environment show that the proposed method outperforms multiple baselines in key error-line coverage, root cause identification accuracy, and quality of repair suggestions, while maintaining a good balance between log compression ratio and inference overhead.
 \end{abstract}
 
 %%
 %% Keywords
 %%
-\keywords{RISC\,-V, 构建失败, 根因分析, 日志压缩, 大语言模型}
+\keywords{RISC\,-V, build failure, root cause analysis, log compression, large language model}
 
 %%
 %% Make title
 %%
 \maketitle
 
-%% ===== 第一章 绪论 =====
-\section{绪论}
+%% ===== Section 1 Introduction =====
+\section{Introduction}
 
-近年来，RISC\,-V 依托开源、模块化与可扩展等特性快速发展\cite{r1,r4}，逐渐成为新一代通用计算与专用计算的重要选择方向之一。随着产业界与学术界对 RISC\,-V 的持续投入，大量主流开源软件正在向 RISC\,-V 架构迁移\cite{r16}。然而由于主流开源软件的上游长期以 x86 和 ARM 为核心支持对象，其持续版本迭代往往不断引入新的架构强绑定特性，导致大量原本已适配 RISC\,-V 的软件包在跟随上游更新后再次构建失败。
+In recent years, RISC\,-V has been rapidly developing thanks to its openness, modularity, and extensibility~\cite{cui2023risc}, and is gradually becoming one of the major options for next-generation general-purpose and domain-specific computing. With continuous investments from both industry and academia, a large number of mainstream open-source software projects are being ported to the RISC\,-V architecture~\cite{mezger2022survey}. However, since the upstream of mainstream open-source software has long been centered on x86 and ARM, their continuous version iterations keep introducing new architecture-specific features. As a result, many packages that were once adapted to RISC\,-V fail to build again after following upstream updates~\cite{lou2020understanding}.
 
-在发行版级的软件包迁移实践中，开放构建服务（OBS）等平台通过自动化的构建、依赖管理与发布流程，为跨发行版、跨架构的软件包构建提供了统一基础设施。然而在 OBS 这类高度自动化的流水线中，构建失败呈现更高的频发性与多样性：同一软件包在不同架构、不同依赖版本、不同构建阶段（如~\texttt{\%prep}、\texttt{\%build}、\texttt{\%install}、\texttt{\%check}）均可能触发错误，且错误往往由架构差异、依赖链约束、构建脚本配置与补丁变更等多因素共同作用\cite{r12,r13}。构建日志通常规模巨大（数万至数十万行），真正与失败相关的关键信息不足 5\%，且日志格式在不同软件包与构建阶段间差异极大。更重要的是，很多时候最后出现的报错只是结果，真正触发失败的原因可能早在更前面的阶段就已出现，形成长程因果依赖。
+In distribution-level package migration practices, platforms such as the Open Build Service (OBS) provide unified infrastructure for cross-distribution and cross-architecture package builds through automated building, dependency management, and release processes. However, in such highly automated pipelines, build failures exhibit even higher frequency and diversity: the same package may fail on different architectures, with different dependency versions, or at different build stages (e.g., \texttt{\%prep}, \texttt{\%build}, \texttt{\%install}, \texttt{\%check}). These failures are often caused by a combination of factors such as architectural differences, dependency-chain constraints, build script configurations, and patch changes. Build logs are typically huge (tens of thousands to hundreds of thousands of lines), while truly failure-related key information accounts for less than 5\%, and log formats vary greatly across packages and stages. More importantly, the final error message is often only the consequence, while the real root cause might have appeared much earlier in the pipeline, forming long-range causal dependencies.
 
-为更直观地说明这种异步触发与长程因果依赖的特征，图~\ref{fig:causal-dep} 展示了 \texttt{aide} 软件包在真实构建环境中的失败日志片段。该构建错误在日志中呈现出典型的跨距离分布形态：（1）\emph{构建终止信号（末端）}：构建系统最终在第 1021 行抛出笼统的构建终止信号（\texttt{RPM build errors}）。（2）\emph{显性错误语句（中端）}：向前回溯，真正的编译期错误出现在第 998 行，日志提示 \texttt{`GCRY\_MD\_SM3' undeclared}（宏未定义）。（3）\emph{隐性根本原因（前端）}：然而，导致该宏未定义的根本原因隐藏在数百行之前的依赖安装阶段——在第 471 行，系统安装了 \texttt{libgcrypt-1.8.7-1.oe1} 版本，而该版本不支持 SM3 算法。值得注意的是，第 471 行仅是一条普通的 \texttt{installing} 常规输出，完全没有任何异常或错误标记。
+To more intuitively illustrate such asynchronous triggering and long-range causal dependency patterns, Figure~\ref{fig:causal-dep} shows a real build-log snippet for the \texttt{aide} package. The failure presents a typical long-distance distribution in the log: (1) \emph{Build termination signal (tail)}: the build system eventually throws a generic termination signal (\texttt{RPM build errors}) at line 1021. (2) \emph{Explicit error statement (middle)}: looking backwards, the real compilation error appears at line 998, where the log reports \texttt{`GCRY\_MD\_SM3' undeclared}. (3) \emph{Implicit root cause (head)}: however, the root cause of this undefined macro hides in the dependency installation stage hundreds of lines earlier---at line 471 the system installs \texttt{libgcrypt-1.8.7-1.oe1}, a version that does not support the SM3 algorithm. Note that line 471 is just a normal \texttt{installing} line with no anomaly or error mark at all.
 
 \begin{figure}[!htbp]
     \centering
     \includegraphics[width=\columnwidth]{pic/log-causal-dependency.png}
-    \caption{构建日志中的长程因果依赖示例}
+    \caption{Example of long-range causal dependencies in build logs}
     \label{fig:causal-dep}
 \end{figure}
 
-这种原因在前、错误在后的现象揭示了处理超长构建日志的核心痛点：如果自动化分析仅依靠截取报错附近的局部窗口，或者单纯依赖 \texttt{error} 等异常关键字进行过滤，第 471 行这部分决定性的版本依赖线索将被彻底丢弃。这正是本文面临的\textbf{挑战一}：如何从超长日志中找准真正的错误——关键报错被大量噪声淹没，真正触发失败的原因可能早在数百行前出现，仅截取报错附近的窗口容易错过因果线索。
+This ``cause first, error later'' phenomenon reveals the core difficulty of handling ultra-long build logs: if automated analysis only relies on taking a local window around the final error, or simply filters lines by keywords such as \texttt{error}, the decisive dependency-version clue at line 471 will be completely discarded. This leads to \textbf{Challenge 1}: how to locate the true error from an ultra-long log---key error lines are buried in massive noise, while the real root cause may have appeared hundreds of lines earlier, and naive windowing around the final error easily misses causal clues.
 
-即便日志压缩阶段成功保留了关键证据链，根因分析与修复推荐仍然面临缺乏可靠历史经验的问题。基于向量相似度的朴素 RAG 容易产生\emph{相似误导}：相似日志并不等价于适用修复。如图~\ref{fig:similar-mislead} 所示，\texttt{apache-mime4j} 软件包构建日志与 \texttt{hibernate} 软件包构建日志中出现完全一致的关键报错，但进一步结合各自的构建脚本与环境约束后可以发现，其有效修复方案并不相同。该案例说明：构建失败的修复方案并不仅取决于报错文本本身，还强依赖于包的构建阶段、工具链与依赖组合等上下文前提。仅以文本相似度进行历史案例检索，容易将不满足适用前提的历史案例引入上下文，反而放大误判风险。
+Even if the log compression stage successfully retains the key evidence chain, root cause analysis and repair recommendation still suffer from lack of reliable historical experience. A naive vector-similarity-based RAG often encounters \emph{similarity misleading}: similar logs do not necessarily imply applicable fixes. As shown in Figure~\ref{fig:similar-mislead}, the build logs of the \texttt{apache-mime4j} package and the \texttt{hibernate} package share exactly the same key error message, but by further considering their respective build scripts and environmental constraints, we find that their effective fixes are actually different. This case shows that the fix for a build failure depends not only on the error text itself, but also heavily on contextual prerequisites such as build stage, toolchain, and dependency combination. Solely relying on textual similarity to retrieve historical cases tends to bring in examples that do not satisfy the applicability conditions, which increases the risk of misdiagnosis.
 
 \begin{figure}[!htbp]
     \centering
     \includegraphics[width=\columnwidth]{pic/similar-misleading.png}
-    \caption{相似报错但不同修复方案的误导性示例}
+    \caption{Misleading example: similar errors but different fixes}
     \label{fig:similar-mislead}
 \end{figure}
 
-此外，大模型在此类任务上的主要问题并非缺少语言表达能力，而是推理结果的可验证性不足。面对多证据并存、证据片段前提缺失或证据互相矛盾的情况，模型倾向于生成连贯但难以复现的解释与方案。在工程排障中，修复建议必须能够被复查与复现：不仅要给出原因，还应明确基于哪些日志证据、满足哪些前提条件、对应哪条历史修复记录。这正是本文面临的\textbf{挑战二}：如何从历史案例中找对能用的修复参考——修复经验分散在不同仓库的提交记录与 issue 讨论中，相似日志并不等价于适用修复，版本/依赖/阶段不同时可能产生误导。
+In addition, the main difficulty for large language models on such tasks is not lack of expressive capability, but insufficient verifiability of their reasoning results. When multiple pieces of evidence coexist, or when evidence fragments are missing or mutually inconsistent, models tend to generate fluent but hard-to-reproduce explanations and solutions. In engineering troubleshooting, repair suggestions must be reviewable and reproducible: they should not only state the cause, but also explicitly specify which log evidence they rely on, under what preconditions they hold, and which historical fix records they correspond to. This gives rise to \textbf{Challenge 2}: how to retrieve the \emph{right} historical fixes---repair experience is scattered across commits and issue discussions in different repositories; similar logs do not imply applicable fixes, and differences in version, dependencies, and build stage may lead to misleading recommendations.
 
-面向 RISC\,-V 软件包迁移的构建失败分析，亟需一种能够在有限 token 上下文预算下保留高保真证据链、并将历史修复经验以可判定条件与可追溯证据的方式组织起来的自动化方法。
+Therefore, for RISC\,-V package-migration build failures, we urgently need an automated approach that can, under limited token-context budgets, preserve high-fidelity evidence chains and organize historical repair experience into verifiable, condition-based, and evidence-traceable knowledge.
 
-针对上述挑战，本文做出以下贡献：
+To address the above challenges, this paper makes the following contributions:
 \begin{enumerate}
-\item 提出面向长程因果依赖的多粒度语义日志压缩方法（MGSC），通过``显式错误锚点定位—基于实体的跨距离上下文回溯—轻量模型细粒度语义压缩''三阶段流水线，在严格 token 预算下高保真保留关键证据链。
-\item 提出基于历史修复经验的规则学习与根因推理方法（HRL-RCA），将修复经验抽取为结构化规则并按``错误类型—构建阶段—适用前提''组织为树形索引，在线推理时通过条件路由召回满足前提的规则，结合 ReAct 范式生成可追溯的根因分析与修复建议。
-\item 基于 OBS 生产环境构建 RISC\,-V 构建失败数据集并开展系统实验，结果表明 MGSC 在关键证据覆盖率上优于现有压缩方法，HRL-RCA 在综合诊断得分上达到 79.0\%，显著超过多种基线，同时处理耗时降低约 61\%。
+\item We propose Multi-Granularity Semantic Compression (MGSC), a log compression method oriented to long-range causal dependencies. MGSC follows a three-stage pipeline of ``explicit error anchor localization---entity-based long-distance context backtracking---lightweight semantic compression'', and preserves high-fidelity evidence chains under strict token budgets.
+\item We propose Historical Rule Learning for Root Cause Analysis (HRL-RCA). HRL-RCA structures historical repair experience into rules and organizes them into a tree index along the axes of ``error type---build stage---applicability conditions''. During online inference, it performs conditional routing to retrieve rules that satisfy their preconditions and, under a ReAct-style framework, generates traceable root cause analyses and repair suggestions.
+\item Based on an OBS production environment, we construct a RISC\,-V build-failure dataset and conduct systematic experiments. Results show that MGSC achieves higher coverage of key evidence than existing compression methods, while HRL-RCA attains a comprehensive diagnostic score of 79.0\%, significantly outperforming various baselines, and reduces processing time by about 61\%.
 \end{enumerate}
 
-%% ===== 第二章 相关工作 =====
-\section{相关工作}
+%% ===== Section 2 Related Work =====
+\section{Related Work}
 
-\subsection{日志解析与语义压缩}
+\subsection{Log Parsing and Semantic Compression}
 
-日志解析旨在将非结构化日志归一化为事件模板与动态参数的结构化表示。早期方法依赖规则与正则匹配，典型如 SLCT\cite{r18} 通过聚类算法挖掘日志模式、Drain\cite{r20} 通过固定深度解析树实现在线高效解析，Logram\cite{r17} 利用 $n$-gram 字典加速模板识别。随着深度学习的发展，基于 LSTM 的方法\cite{r5} 学习正常执行路径的时序规律以检测异常；基于 Transformer 与自监督学习的方法获得更强的语义表征能力\cite{r6}。然而这些方法在跨系统、跨版本迁移时面临泛化不足的问题。
+Log parsing aims to normalize unstructured logs into structured representations of event templates and dynamic parameters. Early work relied on rules and regular expressions. Representative methods include SLCT~\cite{vaarandi2008mining}, which mines log patterns via clustering, Drain~\cite{he2017drain}, which builds a fixed-depth parsing tree for efficient online parsing, and Logram~\cite{dai2020logram}, which uses $n$-gram dictionaries to accelerate template recognition. With the rise of deep learning, LSTM-based methods such as DeepLog~\cite{du2017deeplog} learn temporal patterns of normal execution paths for anomaly detection, while Transformer-based and self-supervised approaches provide stronger semantic representations~\cite{guo2021logbert,chen2022bert}. However, these methods often struggle to generalize across systems and versions.
 
-近年来，大语言模型（LLM）为日志解析提供了新的范式\cite{r8}。基于 prompt 的少样本日志解析\cite{r21}通过示例选择降低调用成本；DivLog\cite{r22} 通过上下文学习提升跨域解析能力；面向可解释性的在线日志分析方法\cite{r10}通过提示策略增强 LLM 的日志理解能力。面向 CI/CD 场景的日志分析框架\cite{r9}提出 token 高效的预处理与结构化诊断流程。然而在软件包构建失败这类长程因果依赖强、阶段跨度大的场景中，如何在有限 token 预算下稳定保留可追溯证据链，仍需更贴合任务特性的压缩方法。
+Recently, large language models (LLMs) have brought a new paradigm to log parsing~\cite{achiam2023gpt}. The few-shot log-parsing method LogPrompt~\cite{liu2024logprompt} reduces cost by careful example selection; DivLog~\cite{xu2024divlog} enhances cross-domain parsing via in-context learning; LLMParser~\cite{ma2024llmparser} treats LLMs as generative parsers and provides empirical analysis. LogSage~\cite{xu2025logsage}, a log analysis framework for CI/CD scenarios, proposes token-efficient preprocessing and structured diagnosis. However, in build-failure scenarios of software packages, where long-range causal dependencies and cross-stage reasoning are crucial, how to stably preserve traceable evidence chains under tight token budgets remains an open problem requiring task-specific compression methods.
 
-\subsection{基于日志的根因分析}
+\subsection{Log-based Root Cause Analysis}
 
-根因分析（RCA）旨在从系统输出中定位故障的底层原因。传统方法通过规则关联完成事件匹配\cite{r19}，或结合源码分析推断失败执行路径\cite{r14}。深度学习方法将根因分析表述为日志行相关性排序任务，从日志中抽取故障指示性描述与参数用于结构化诊断\cite{r12}。
+Root cause analysis (RCA) aims to identify underlying causes of failures from system outputs. Traditional approaches often use rule-based correlation to match events~\cite{notaro2023logrule}, or combine with source-code analysis to infer failing execution paths~\cite{yuan2010sherlog}. Deep learning methods cast RCA as a log-line relevance ranking task, extracting indicative descriptions and parameters from logs for structured diagnosis~\cite{wittkopp2024logrca}.
 
-LLM 驱动的 RCA 更强调直接从故障日志出发生成可读的诊断结论。RCAgent\cite{wang2024rcagent} 通过工具增强的 LLM 智能体实现自主诊断，基于 Agent 的设计让模型通过多步推理逐步缩小根因范围。基于检索增强的方法\cite{r13}将多源信息组织为 LLM 可消费的上下文完成排障建议。然而，仅依赖``相似日志检索 + 自由生成''容易引入误导证据或放大幻觉，必须把适用前提、证据对齐与验证机制纳入体系化方案。本文方法正是从历史修复经验中学习可判定规则，并以树形索引实现条件路由，从源头降低误导风险。
+LLM-based RCA emphasizes directly generating human-readable diagnostic conclusions from failure logs. Roy et al.~\cite{roy2024exploring} show that agent-based designs can alleviate the sensitivity of single-turn QA to context budgets and missing information. Shuai et al.~\cite{shuai2025root} propose a two-stage framework in which RV-LAD performs log compression, and MCTS-RCA combines Monte Carlo tree search with RCA to guide LLM reasoning. However, approaches that rely solely on ``similar-log retrieval + free-form generation'' risk introducing misleading evidence and amplifying hallucinations; applicability conditions, evidence alignment, and verification mechanisms must be incorporated in a systematic way. Our method explicitly learns verifiable rules from historical repair experience and organizes them into a rule tree with conditional routing, thereby reducing the risk of misleading retrieval at its source.
 
-\subsection{构建失败分析与软件包迁移}
+\subsection{Build Failure Analysis and Package Migration}
 
-除通用日志分析与 RCA 之外，已有工作也面向软件构建失败本身展开研究。一类研究聚焦于大型开源生态的构建失败统计与模式挖掘\cite{r1,r4,r16}，通过对发行版仓库或持续集成流水线中的失败记录进行汇总，给出典型失败类型、易错阶段以及与依赖关系、配置脚本之间的相关性分析，为后续自动化修复提供经验基础。另一类工作则从工程视角出发，探索在 OBS、GitHub Actions 等平台上利用规则库或分类模型对构建失败进行自动归因与分派\cite{r12,r13}，降低维护者人工排查的工作量。
+Beyond general log analysis and RCA, there is also prior work specifically focusing on build failures. One line of research conducts empirical studies and pattern mining on build failures in large open-source ecosystems~\cite{rausch2017empirical}, aggregating failure records from distribution repositories and CI pipelines to characterize typical failure types, error-prone stages, and their correlations with dependency relationships and configuration scripts, thereby providing empirical foundations for automated repairs. Another line of work, from a more engineering-oriented view, explores using classification models or triage methods in CI build scenarios to automatically attribute and assign build failures~\cite{lee2024applying}, reducing manual debugging effort.
 
-然而，这些针对构建失败的研究往往仍停留在``短窗口 + 局部特征''的范式上：要么依赖人工设计的错误模式和启发式规则，难以应对异构日志和跨版本演进；要么在单次调用中直接将长日志截断输入模型，忽略了跨阶段的长程因果依赖。此外，现有系统多以错误类别预测或简单的经验推荐为目标，缺乏对历史修复知识的结构化组织和可判定适用前提的建模。相比之下，本文在构建失败场景下同时引入面向证据链保留的多粒度日志压缩（MGSC）以及基于规则树的历史修复知识建模（HRL-RCA），在统一框架内兼顾了长日志处理效率、跨阶段根因定位能力与修复建议的可验证性。
+However, these build-failure studies mostly remain within a ``short window + local features'' paradigm: they either rely on manually designed error patterns and heuristics, which struggle with heterogeneous logs and cross-version evolution; or they directly truncate long logs into a single model input, ignoring cross-stage long-range causal dependencies. In addition, many existing systems focus on error-type prediction or simple heuristic recommendations, and lack structured organization of historical repair knowledge and explicit modeling of applicability conditions. In contrast, our work introduces both MGSC, which preserves evidence chains in long logs, and HRL-RCA, which models historical repair knowledge as a rule tree with explicit conditions, achieving in a unified framework efficient long-log processing, cross-stage root cause localization, and verifiable repair recommendations.
 
 \begin{figure*}[!t]
     \centering
     \includegraphics[width=\textwidth]{pic/mgsc-overview.png}
-    \caption{MGSC 多粒度语义日志压缩方法整体流程}
+    \caption{Overall workflow of MGSC: Multi-Granularity Semantic Compression}
     \label{fig:mgsc}
 \end{figure*}
 
-%% ===== 第三章 方法 =====
-\section{方法}
+%% ===== Section 3 Method =====
+\section{Method}
 
-本文采用两阶段流水线处理 RISC\,-V 构建失败。第一阶段（MGSC）对超长日志进行多粒度语义压缩，输出以关键错误行为中心、包含必要上下文的结构化摘要。第二阶段（HRL-RCA）以压缩摘要为输入，结合历史修复经验的规则树索引，通过条件路由与 ReAct 推理生成可追溯的根因分析与修复建议。
+We adopt a two-stage pipeline for handling RISC\,-V build failures. In the first stage, MGSC performs multi-granularity semantic compression on ultra-long logs and outputs a structured summary centered on key error lines with necessary context. In the second stage, HRL-RCA takes the compressed summary as input, combines it with a rule-tree index built from historical repair experience, and generates traceable root cause analyses and repair suggestions via conditional routing and ReAct-style reasoning.
 
-\subsection{MGSC：多粒度语义日志压缩}\label{sec:mgsc}
+\subsection{MGSC: Multi-Granularity Semantic Compression}\label{sec:mgsc}
 
-构建失败日志的压缩并非简单删掉大部分行，而是要在有限预算内尽可能保留能支撑根因分析的关键证据。为此，本文提出面向长程因果依赖的多粒度语义日志压缩方法（MGSC），其核心思想是以显式错误信息为锚点快速定位失败表征，再以关键实体为线索跨距离回溯补齐触发条件，最后在候选证据集上进行细粒度语义压缩与结构化整理，从而把原始长日志转化为不丢失因果信息的摘要结果。该方法强调多粒度与长程关联两点：多粒度体现在从关键错误行到错误相关片段再到实体级相关线索的逐层聚焦；长程关联则体现在通过实体回溯把相距很远的因果线索重新拼接，避免仅截取尾部报错导致的信息丢失。如图~\ref{fig:mgsc} 所示，MGSC 分为三个阶段：阶段~1 通过轻量规则与启发式评分，优先保留错误附近和阶段关键转折点对应的片段，追求高召回的候选错误块；阶段~2 从候选错误块中抽取关键实体线索，在全日志范围内跨距离回溯补全因果链；阶段~3 在候选片段集合上执行细粒度语义压缩与结构化整理，输出固定预算内的高密度信息载体。
+Log compression for build failures is not merely about dropping most lines; instead, the goal is to preserve, under a limited budget, the key evidence that supports root cause analysis. To this end, we propose Multi-Granularity Semantic Compression (MGSC), a method oriented toward long-range causal dependencies in logs. The core idea is to first quickly locate failure manifestations using explicit error information as anchors, then backtrack triggering conditions across long distances using key entities as clues, and finally perform fine-grained semantic compression and structuring over the candidate evidence set. In this way, the original long log is transformed into a summary that does not lose causal information. MGSC emphasizes two aspects: multi-granularity and long-range associations. Multi-granularity means progressively focusing from key error lines, to error-related segments, and further down to entity-level clues; long-range associations are achieved by using entity backtracking to reconnect distant causal clues that would otherwise be lost if we only kept the tail region around the final error. As shown in Figure~\ref{fig:mgsc}, MGSC consists of three stages: Stage 1 uses lightweight rules and heuristic scoring to prioritize segments near errors and critical turning points in the build process, obtaining candidate error blocks with high recall; Stage 2 extracts key entities from candidate blocks and backtracks them across the entire log to complete the causal chain; Stage 3 performs fine-grained semantic compression and structuring over the candidate segments, yielding a high-density information carrier under a fixed budget.
 
-给定原始构建日志 $L = \{l_1, l_2, \ldots, l_N\}$，MGSC 的目标是生成满足 token 预算约束 $|S| \leq B$ 的结构化压缩结果 $S$，使 $S$ 中保留的关键证据行与因果线索最大化。其中 $B$ 通常取下游大模型上下文长度的一半，为后续根因推理与工具调用预留充足空间。
+Given an original build log $L = \{l_1, l_2, \ldots, l_N\}$, the goal of MGSC is to produce a structured compressed result $S$ that satisfies a token-budget constraint $|S| \leq B$ while maximizing the coverage of key evidence and causal clues in $S$. Here $B$ is typically set to half of the downstream LLM's context window, leaving sufficient space for subsequent root cause reasoning and tool calls.
 
-\subsubsection{快速粗粒度过滤}
+\subsubsection{Fast Coarse-Grained Filtering}
 
-RISC-V 软件包在 OBS 平台上的构建日志通常具有超长、异构、噪声高的典型特征：一方面，日志中包含大量正常编译输出、平台提示与工具链信息，真正与失败根因相关的内容只占极小比例，整体信噪比极低；另一方面，构建流程跨越多个阶段，错误触发条件可能出现在很早的探测或依赖检查阶段，却在后续编译或链接阶段以显式报错形式集中爆发。若直接对全量日志进行实体回溯或语义压缩，不仅计算开销高、token 成本难以控制，还容易被冗余信息干扰。因此，MGSC 首先设置快速粗粒度过滤阶段：用轻量规则与启发式策略快速剔除已验证无用的冗余输出，定位显式错误锚点，并以锚点为中心生成少量高相关候选日志块。
+RISC-V package build logs on OBS are typically ultra-long, heterogeneous, and noisy. On the one hand, logs contain massive normal compilation outputs, platform messages, and toolchain information, while the content truly related to the root cause only accounts for a tiny fraction, resulting in a very low signal-to-noise ratio. On the other hand, the build process spans multiple stages, and triggering conditions may first appear in early probing or dependency-checking stages, but manifest as explicit errors later during compilation or linking. Simply applying entity backtracking or semantic compression to the full log is not only computationally expensive and token-costly, but also prone to being disturbed by redundant information. Therefore, MGSC first performs a fast coarse-grained filtering stage, which quickly removes verified useless outputs using lightweight rules and heuristics, locates explicit error anchors, and generates a small set of highly relevant candidate blocks centered around those anchors.
 
-具体而言，首先通过正则规则集合 $R_{drop}$ 去除跨包稳定出现但与失败无关的冗余输出（如编译器版本回显、下载进度、固定格式状态提示等），得到过滤后日志 $L' = \{l_i \in L \mid g(l_i) = 1\}$。随后通过分层关键词匹配召回关键错误行集合 $A$，匹配层次包括：（1）强错误模式——\texttt{error:}、\texttt{fatal}、\texttt{undefined reference}、\texttt{No such file}、\texttt{Bad exit status} 等；（2）构建终止提示——\texttt{RPM build errors}、\texttt{make: *** Error} 等；（3）补充召回模式——\texttt{undefined symbol}、\texttt{cannot find -lxxx} 等弱信号。对重复报错与相同错误模板进行合并去噪，避免同一错误占据过多预算。
+Concretely, we first use a set of regular-expression rules $R_{drop}$ to remove redundant outputs that repeatedly appear across packages but are unrelated to failures (e.g., compiler version echoes, download progress, fixed-format status messages), yielding a filtered log $L' = \{l_i \in L \mid g(l_i) = 1\}$. We then perform multi-level keyword matching to collect a set of key error lines $A$, with matching layers including: (1) strong error patterns such as \texttt{error:}, \texttt{fatal}, \texttt{undefined reference}, \texttt{No such file}, and \texttt{Bad exit status}; (2) build termination messages such as \texttt{RPM build errors} and \texttt{make: *** Error}; and (3) supplementary signals such as \texttt{undefined symbol} and \texttt{cannot find -lxxx}. Duplicate errors and repeated templates are merged to avoid a single error occupying too much budget.
 
-在获得关键错误行集合 $A$ 后，对每条错误行做前后窗口扩展生成候选日志块 $\mathcal{B}$，以保证局部语义完整。对块内每行 $l_i$ 按以下行级评分函数衡量重要性：
+After obtaining the key error lines $A$, we expand a window around each error line to form candidate blocks $\mathcal{B}$, ensuring local semantic completeness. For each line $l_i$ in a block, we compute a line-level importance score:
 \begin{equation}
 S(l_i) = \alpha \cdot I_{key}(l_i) + \beta \cdot f_{pos}(i) + \gamma \cdot D_{context}(i)
 \end{equation}
-其中 $I_{key}$ 为关键词匹配指示函数，$f_{pos}(i) = e^{-\lambda(N-i)/N}$ 为位置偏置项（越靠近日志末尾权重越高），$D_{context}$ 为局部关键词密度项。块级得分取块内行得分的聚合（最大值 + 平均值），以保证含有强错误锚点的块能够优先上浮，同时避免块仅因更长而占据优势。系统按块级得分从高到低排序，在 token 预算约束下选择 Top-n 块输出。本文约束该阶段输出的总 token 长度不超过下游大模型上下文窗口的四分之一，为后续实体回溯补全与语义压缩预留充足空间。
+where $I_{key}$ is an indicator function for keyword matches, $f_{pos}(i) = e^{-\lambda(N-i)/N}$ is a positional bias term (lines closer to the log tail receive higher weights), and $D_{context}$ is a local keyword-density term. Block-level scores are obtained by aggregating line scores (e.g., max + mean), ensuring that blocks containing strong error anchors are ranked higher while avoiding an unfair advantage for longer blocks. The system ranks blocks by their scores and selects the Top-$n$ blocks under the token budget. In our setting, the total token length of this stage is constrained to be no more than one quarter of the downstream LLM's context window, leaving ample room for subsequent entity backtracking and semantic compression.
 
-\subsubsection{基于实体的上下文回溯}
+\subsubsection{Entity-Based Context Backtracking}
 
-经过快速粗粒度过滤后，系统已从超长日志中获得一组高相关的候选日志块，并以显式错误行作为锚点保留了失败发生时的局部语义上下文。然而在 RISC-V 软件包构建失败场景中，单纯依赖错误附近的窗口片段往往仍不足以支撑稳定的根因分析。原因在于构建失败常呈现明显的跨距离特征：真正触发失败的线索可能出现在更早的 \texttt{configure} 探测、依赖安装或配置信息中，而最终错误却在 \texttt{\%build} 阶段集中爆发；同一根因也可能在多个阶段以不同形式被反复暗示，例如先出现找不到头文件/库的提示，随后在编译阶段演化为类型/符号未定义，在链接阶段进一步表现为 \texttt{undefined reference}。这种原因在前、现象在后的长程因果依赖，使得仅保留显式错误附近片段容易出现证据断裂。
+After coarse-grained filtering, the system has obtained a set of highly relevant candidate blocks with explicit error lines serving as anchors and preserving the local context where failures occur. However, in RISC-V build-failure scenarios, relying solely on windowed snippets around errors is often insufficient for stable root cause analysis because of pronounced long-distance effects: the true triggering clues may appear earlier in \texttt{configure} checks, dependency installations, or configuration information, while final errors break out during \texttt{\%build}; the same root cause may manifest multiple times in different forms, for example, an early warning about missing headers/libraries, later compilation errors about undefined types/symbols, and final link-time \texttt{undefined reference} messages. This ``cause first, symptoms later'' long-range causal structure leads to broken evidence chains if we only preserve local windows around explicit errors.
 
-为实现跨距离因果链的补全，本阶段从粗粒度过滤得到的显式错误片段中抽取可用于回溯的查询要素，并将其组织为结构化实体集合 $E$。这里的实体并非泛指自然语言中的任意名词，而是指能够在构建日志中稳定出现、能够指向失败链条关键节点的符号化线索，具体包括：函数/符号名（如 \texttt{\_\_cpuid}、\texttt{riscv\_v\_asm\_flag}）、依赖库名（如 \texttt{libatomic}、\texttt{openssl-devel}）、缺失头文件名、目标文件与路径、构建目标、宏定义与关键编译/链接选项等。实体集合的质量直接决定回溯的有效性：实体过少会导致回溯召回不足，实体过杂则会引入大量无关片段。
+To complete long-range causal chains, this stage extracts backtrackable query elements from explicit error segments and organizes them into a structured entity set $E$. Here, entities do not refer to arbitrary nouns in natural language, but to symbolic clues that stably appear in build logs and point to key nodes in failure chains. They include function/symbol names (e.g., \texttt{\_\_cpuid}, \texttt{riscv\_v\_asm\_flag}), library names (e.g., \texttt{libatomic}, \texttt{openssl-devel}), missing headers, target files and paths, build targets, macros, and key compile/linking options. The quality of $E$ directly affects backtracking effectiveness: too few entities lead to insufficient recall, while overly noisy entities introduce irrelevant segments.
 
-以实体集合 $E$ 为查询条件，在原始日志 $L$ 中检索相关片段。对每行 $l_j$ 定义回溯价值：
+Using the entity set $E$ as queries, we search the original log $L$ for related segments. For each line $l_j$, we define a backtracking value:
 \begin{equation}
 V(l_j) = \max_{e \in E}\left(\mathrm{Sim}(l_j, e) \cdot \frac{1}{\log(1 + \lambda \Delta t(l_j, e))}\right)
 \end{equation}
-其中 $\mathrm{Sim}$ 表示模糊匹配相似度（支持子串匹配、大小写不敏感匹配与简单编辑距离），距离项保证在相似度相当时偏向更近的行。系统选取回溯价值高于阈值的命中行，并聚合为回溯片段，将分散在不同构建阶段的因果证据补齐。例如，当显式错误中出现 \texttt{undefined reference to `foo\_v\_probe'}，实体回溯会在日志前部 \texttt{configure} 阶段找到相关的 \texttt{checking for foo\_v\_probe... no} 以及对应的 \texttt{config.log} 中的编译失败信息，从而将配置探测失败与链接错误之间的因果关系补全。
+where $\mathrm{Sim}$ denotes fuzzy matching similarity (supporting substring matches, case-insensitive matches, and small edit distances), and the distance term biases toward closer lines when similarities are comparable. Lines whose values exceed a threshold are selected and aggregated into backtracking segments, thereby filling in causal evidence scattered across build stages. For example, when an explicit error reports \texttt{undefined reference to `foo\_v\_probe'}, entity backtracking may locate, in earlier \texttt{configure} stages, lines like \texttt{checking for foo\_v\_probe... no} and the corresponding compilation failures in \texttt{config.log}, thus bridging configuration-probing failures and link-time errors.
 
-\subsubsection{细粒度语义压缩}
+\subsubsection{Fine-Grained Semantic Compression}
 
-经过粗粒度过滤与实体回溯后，系统已收敛出两类高价值信息：以显式报错为核心的关键错误行及其局部上下文，以及围绕错误实体在全日志范围内回溯得到的相关片段。然而，回溯得到的相关信息仍以原始日志片段形式存在，内容可能冗余、表达不统一，且长度较长，易超过下游推理模型可承受的上下文预算。如果直接将这些片段拼接输入大模型，不仅 token 成本高，而且噪声与重复信息会干扰后续根因分析，使推理结果不稳定。
+After coarse-grained filtering and entity backtracking, the system has converged to two types of valuable information: key error lines with their local context and related segments obtained by backtracking entities across the whole log. However, these backtracking results still exist as raw log segments that may be redundant, stylistically inconsistent, and too long, easily exceeding the context capacity of downstream models. If we simply concatenate them and feed them to an LLM, we would incur high token costs and introduce noise and duplication that harm the stability of subsequent reasoning.
 
-为此，本阶段引入细粒度语义压缩：使用领域微调的轻量模型对回溯片段进行摘要与要点凝练，并与粗粒度阶段保留的显式错误信息融合，生成结构化、预算可控的日志语义压缩结果。这里的摘要并非泛化叙述，而是围绕根因分析需求进行任务导向的信息整合：一方面保留对定位有用的上下文行/片段摘要，另一方面给出阶段归属标签（如 \texttt{\%prep}、\texttt{\%build}），同时凝练可直接用于判断根因方向的关键事实，例如缺少某依赖导致 \texttt{configure} 禁用特性、链接阶段找不到 \texttt{-lxxx}、某符号在 RISC-V 下不可用等。
+Therefore, this stage performs fine-grained semantic compression. We use a lightweight, domain-tuned model to summarize and distill backtracking segments and then fuse them with explicit error information preserved in the coarse-grained stage, producing a structured and budget-controlled semantic summary of the log. Here, the summarization is task-oriented rather than generic: it focuses on information that supports RCA. On the one hand, it preserves context lines/segments helpful for localization; on the other, it attaches stage labels (e.g., \texttt{\%prep}, \texttt{\%build}) and distills key facts directly relevant to root causes, such as certain dependencies being disabled in \texttt{configure} due to missing packages, link-time failures like \texttt{cannot find -lxxx}, or architecture-specific symbols not being available under RISC-V.
 
-基座模型选用 Qwen3-4B-Instruct，该模型在指令跟随与文本生成方面具备良好基础，同时参数规模适中，便于在工程系统中以较低成本部署推理。通过面向任务的监督微调，将模型能力收敛到保留关键信息、压缩无用细节并且输出格式稳定的目标上。微调训练集包含 2925 条高质量日志块语义压缩数据，采用 SFT + LoRA 参数高效微调策略。实验表明，微调后模型的压缩比由 19.66$\times$ 提升至 30.6$\times$，同时关键错误覆盖率从 74.3\% 提升至 75.7\%，说明领域微调在提升压缩效率的同时保持了关键信息的保留能力。
+We use Qwen3-4B-Instruct as the base model, which has good instruction-following and text-generation abilities with a moderate parameter size suitable for cost-effective deployment. We apply supervised fine-tuning (SFT) with LoRA-based parameter-efficient tuning on 2,925 manually curated log-block compression examples to guide the model toward preserving key information, compressing unhelpful details, and producing stable output formats. Experiments show that compression ratio improves from 19.66$\times$ to 30.6$\times$, while key-error coverage increases slightly from 74.3\% to 75.7\%, indicating that domain-specific tuning improves compression efficiency without sacrificing essential information.
 
-最终将细粒度摘要与粗粒度阶段的显式错误信息融合，输出结构化压缩结果 $S$，使其既可读、可复现，也更利于后续基于历史修复知识的根因推理。
+Finally, we fuse the fine-grained summaries with explicit error information from the coarse-grained stage to obtain the structured compressed result $S$, which is human-readable, reproducible, and well-suited for subsequent rule-based root cause reasoning.
 
 \begin{figure*}[!t]
     \centering
     \includegraphics[width=\textwidth]{pic/hrl-rca-overview.png}
-    \caption{HRL-RCA 基于历史修复经验的规则学习与根因推理框架}
+    \caption{HRL-RCA: framework of Historical Rule Learning for Root Cause Analysis}
     \label{fig:hrl-overview}
 \end{figure*}
 
-\subsection{HRL-RCA：基于历史修复经验的规则学习与根因推理}\label{sec:hrl}
+\subsection{HRL-RCA: Historical Rule Learning for Root Cause Analysis}\label{sec:hrl}
 
-为降低朴素相似检索带来的相似误导，并使修复建议具备可验证的证据依据，本文提出基于历史修复经验的规则学习与根因推理方法（HRL-RCA）。其基本思想是：从历史提交记录中抽取并显式结构化``症状—适用前提—修复动作—证据''之间的对应关系，将分散的修复经验沉淀为可复用的修复规则，并进一步以问题类别、构建阶段与可判定条件为主线构建可维护的树形索引。在线推理时不再依赖相似度直接召回，而是以 MGSC 得到的语义压缩结果为输入进行条件路由检索，在满足适用前提的路径上命中并召回相关规则，再在证据约束下生成根因解释与修复方案，从而实现可解释、可追溯、可执行的输出。
+To mitigate similarity misleading inherent in naive similarity-based retrieval and to make repair suggestions verifiable with explicit evidence, we propose Historical Rule Learning for Root Cause Analysis (HRL-RCA). The basic idea is to extract and explicitly structure the relationships among ``symptoms---applicability conditions---repair actions---evidence'' from historical repair records, turning scattered experience into reusable repair rules, and then build a maintainable rule-tree index along axes of problem category, build stage, and verifiable conditions. During online inference, we no longer directly retrieve by similarity; instead, we use the MGSC summary as input for conditional routing over the rule tree, retrieving rules only when their applicability conditions are satisfied, and then generating root cause explanations and fixes under explicit evidence constraints. This yields interpretable, traceable, and actionable outputs.
 
-如图~\ref{fig:hrl-overview} 所示，整体流程分为离线构建与在线推理两部分。离线阶段面向历史修复记录，首先从 commit message、diff/patch 以及与打包相关的 spec 变更中抽取并结构化修复经验，将其统一沉淀为可复用的修复规则；随后依据错误大类与构建阶段构建树形索引骨架，并从修复规则中提取可判定条件作为分支依据，将每条规则挂载到满足其适用前提的叶节点，同时引入冲突检测与增量更新机制。在线阶段以 MGSC 输出的压缩摘要 $S$（可选附加 spec/patch 与环境摘要）为输入，先完成错误类型与构建阶段判定以定位索引入口，再沿条件分支进行匹配，召回候选叶节点中的修复规则；最终在证据约束下生成包含``根因—修复—适用前提—证据引用''的诊断报告。
+As shown in Figure~\ref{fig:hrl-overview}, the overall workflow contains an offline construction and an online inference part. Offline, we process historical repair commits to extract and structure repair experience from commit messages, diffs/patches, and packaging-related spec changes, and store them as reusable rules. Then, we construct a rule-tree skeleton organized by error category and build stage, and attach each rule to leaf nodes whose conditions are satisfied, with conflict detection and incremental updates. Online, we take the MGSC summary $S$ (optionally augmented with spec/patch and environment summaries) as input, first determine error type and build stage to locate the entry in the rule tree, and then traverse conditional branches to retrieve candidate leaf rules. Under evidence constraints, we finally generate a diagnostic report containing ``root cause---fix---applicability conditions---evidence references''.
 
-\subsubsection{历史修复信息结构化}
+\subsubsection{Structuring Historical Repair Information}
 
-历史修复经验在工程实践中主要以提交记录形式沉淀，包括 commit message、代码 diff/patch 以及与打包相关的 spec 变更等。这类信息虽然包含大量可复用的修复线索，但天然是非结构化、表述不统一且证据粒度不一致的：同一类问题可能被描述为不同措辞（如 ``fix build''、``riscv workaround''、``linker error'' 等），而真正可执行的修复动作往往隐藏在 diff 片段中。若直接将原始 commit 用作相似检索或文本召回对象，容易再次引入相似误导，并且难以显式表达适用前提与修复动作之间的绑定关系。因此，本方法首先将历史提交经验抽象为结构化单元——修复规则，把经验从文本提升为可计算、可路由、可维护的知识条目。
+In practice, historical repair experience is mainly recorded in commits, including commit messages, code diffs/patches, and packing-related spec changes. Although they contain rich repair clues, they are inherently unstructured, stylistically inconsistent, and heterogeneous in evidence granularity: the same type of problem may be described in different ways (e.g., ``fix build'', ``riscv workaround'', ``linker error''), while the actual executable repair actions are often buried in diff snippets. Directly using raw commits as retrieval targets in similarity-based methods easily reintroduces similarity misleading and cannot explicitly capture the relationship between applicability conditions and repair actions. Therefore, HRL-RCA first abstracts historical commits into structured units---repair rules---thus elevating experience from free text to computable, routable, and maintainable knowledge items.
 
-修复规则的构建以单条修复提交为基本对象，输入包含：（1）commit message：描述意图与背景；（2）diff/patch：具体代码或脚本修改内容；（3）spec 相关变更：依赖声明、宏与构建参数、补丁引用等打包侧修改；（4）关联 issue/PR 讨论：问题复现、适用前提与边界条件等补充证据。输出为一个结构化 JSON 记录，字段设计强调两点：一是显式编码适用前提（错误类型 \texttt{error\_type}、构建阶段 \texttt{build\_stage}、触发条件 \texttt{trigger\_condition}、是否为 RISC-V 特有 \texttt{risc\_v\_specific}、是否可泛化 \texttt{can\_generalize}），以支持后续树形索引的分支构建与条件路由；二是保留证据载体（\texttt{files\_touched}、\texttt{commit\_id}、\texttt{notes}），保证生成结果可追溯、可复核。
+Rule construction takes a single repair commit as the basic object, with inputs including: (1) commit message describing intent and background; (2) diffs/patches containing concrete code or script changes; (3) spec changes related to packaging (e.g., dependency declarations, macro and build-parameter modifications, patch references); and (4) associated issue/PR discussions providing information about reproduction, applicability conditions, and boundary cases. The output is a structured JSON record whose fields emphasize two aspects. First, applicability conditions are explicitly encoded (e.g., \texttt{error\_type}, \texttt{build\_stage}, \texttt{trigger\_condition}, \texttt{risc\_v\_specific}, \texttt{can\_generalize}) to support later tree construction and conditional routing. Second, evidence carriers (e.g., \texttt{files\_touched}, \texttt{commit\_id}, \texttt{notes}) are preserved to ensure traceability and human verification.
 
-在构建流程上，采用``传统解析预处理—大模型结构化—校验与规范化''三级流水线。首先，使用传统方法对提交元信息与改动内容进行初步解析，包括对 commit message、diff/patch、spec 变更以及关联 issue/PR 文本进行分段与要素抽取（如 touched files、关键变更块、依赖声明与宏参数修改等），以降低大模型输入噪声并提供必要的结构提示。其次，基于统一的提示模板与固定输出 schema，调用大语言模型将上述解析结果结构化为修复规则，输出字段覆盖 \texttt{error\_type}、\texttt{build\_stage}、\texttt{trigger\_condition}、\texttt{root\_cause}、\texttt{fix\_action} 等，并要求将触发条件、修复模式等关键字段尽可能映射到预定义的规范化标签集合。最后，引入独立的校验模块对大模型输出进行自动校验与纠偏：一方面检查修复规则是否满足结构化 schema 约束（字段完整性、类型一致性、必填项非空等），另一方面对 \texttt{fix\_action}、\texttt{trigger\_condition} 等字段进行规范化一致性检查。当校验失败时，系统触发重写策略（要求模型按校验反馈重新生成特定字段），保证进入知识库的修复规则具有稳定格式、可路由前提与可追溯证据。
+The construction pipeline adopts a three-stage process: ``traditional parsing and preprocessing---LLM-based structuring---validation and normalization''. First, we use traditional techniques to pre-parse metadata and changes, including segmenting commit messages, diffs/patches, spec changes, and associated issue/PR content, and extracting salient elements such as touched files, key change hunks, dependency declarations, and macro/parameter modifications. This reduces input noise and provides structural hints for LLMs. Second, with unified prompt templates and fixed output schemas, we invoke an LLM to convert parsed results into structured repair rules, covering fields such as \texttt{error\_type}, \texttt{build\_stage}, \texttt{trigger\_condition}, \texttt{root\_cause}, and \texttt{fix\_action}, and mapping key fields such as triggers and fix patterns to predefined label sets whenever possible. Finally, an independent validation module automatically checks LLM outputs: it verifies schema conformance (field completeness, type consistency, non-empty required fields) and performs normalization consistency checks for \texttt{fix\_action} and \texttt{trigger\_condition}. When validation fails, the system triggers a rewrite strategy, asking the model to regenerate specific fields using feedback from validation, ensuring that only rules with stable formats, routable conditions, and traceable evidence enter the knowledge base.
 
-\subsubsection{修复规则树形索引构建与维护}
+\subsubsection{Rule-Tree Index Construction and Maintenance}
 
-在得到结构化的修复规则后，需要将分散的修复经验组织为可路由、可维护的知识结构。本文采用树形索引作为知识组织形态，理由有三：其一，构建失败的人工诊断过程本质上遵循先判别错误类别与构建阶段，再依据适用前提逐步缩小范围的排查逻辑，树形索引以显式的条件分支刻画这一过程，使规则匹配路径天然可解释、可复查；其二，修复经验的有效性高度依赖前提约束（版本、架构、依赖状态、构建系统与阶段等），树形索引的路由过程要求每一步都依据可判定条件进行分支查找，从而在检索入口就完成可用性过滤，从源头弱化相似度检索带来的错误召回风险；其三，若将全部规则及其条件直接交由大模型做条件检索，token 成本不可控，且模型易在冗余信息中出现注意力分散与条件遗漏，树形索引通过分层固化路由结构，把筛选过程前置为结构化剪枝，仅将少量满足前提的规则注入模型，实现小上下文、强约束、可复查的推理输入。
+After obtaining structured rules, we need to organize scattered repair experience into a routable and maintainable knowledge structure. We use a tree index for knowledge organization for three reasons. First, the manual diagnostic process for build failures essentially follows a decision path of first determining error category and build stage, and then narrowing down by applicability conditions. A tree index explicitly encodes this process as conditional branches, making rule-matching paths naturally interpretable and reviewable. Second, the effectiveness of repair experience strongly depends on preconditions (e.g., versions, architecture, dependency states, build systems, stages). Tree routing requires each step to follow verifiable conditions, filtering out inapplicable rules at the retrieval entrance and thus mitigating risks of error-prone retrieval due to pure similarity. Third, if we simply feed all rules and their conditions to an LLM for conditional retrieval, token costs would be unmanageable, and the model would easily suffer from attention dispersion and missed conditions amid redundancy. The tree index pre-materializes the routing structure, performing structural pruning ahead of LLM inference and injecting only a small number of rules that satisfy the conditions, thus enabling small-context, strongly constrained, and reviewable reasoning.
 
-如图~\ref{fig:rule-tree} 所示，索引以树形根节点为入口，第一层按本文的错误分类体系划分为五个问题域（架构兼容、版本兼容、依赖配置、编译配置与其他错误），使在线推理能够先在问题域层面完成粗路由；第二层按构建阶段组织（如 \texttt{\%prep}、\texttt{\%build}、\texttt{\%install}、\texttt{\%check} 等），将历史经验约束在一致的阶段语境中，避免同一报错文本在不同阶段含义不同带来的误判。更深层节点由可判定的路由条件驱动分叉，这些条件来自修复规则中显式编码的 \texttt{trigger\_condition}、\texttt{log\_symptoms} 等信息，例如``是否探测到依赖 xxx 缺失''、``是否仅在 RISC-V 架构下触发''等。叶节点挂载具体修复规则集合，并绑定 \texttt{fix\_action}、适用前提与必要备注，在线推理一旦命中路径，便可同时获得``前提—动作—证据''的整体化结果。
+As illustrated in Figure~\ref{fig:rule-tree}, we start from a root node and split the first layer into five domains in accordance with our error taxonomy (architecture compatibility, version compatibility, dependency configuration, build configuration, and other errors), so that online inference can first perform coarse routing at the problem-domain level. The second layer is organized by build stage (e.g., \texttt{\%prep}, \texttt{\%build}, \texttt{\%install}, \texttt{\%check}), constraining historical experience to consistent stage contexts to avoid misinterpretation of the same error text under different stages. Deeper nodes branch according to verifiable routing conditions derived from \texttt{trigger\_condition} and \texttt{log\_symptoms} in rules, such as ``whether dependency xxx is detected missing'', ``whether the failure only occurs on RISC-V'', etc. Leaf nodes store sets of concrete repair rules with their \texttt{fix\_action}, applicability conditions, and annotations. Once a path is hit during online inference, the system obtains a joint package of ``conditions---actions---evidence''.
 
 \begin{figure}[!htbp]
     \centering
     \includegraphics[width=\columnwidth]{pic/rule-tree.png}
-    \caption{修复规则树形索引结构示意}
+    \caption{Illustration of the rule-tree index structure}
     \label{fig:rule-tree}
 \end{figure}
 
-为支持持续演进，设计增量更新与冲突检测合并机制。增量更新以新增修复规则为输入，首先完成与离线构建一致的规范化处理，并据此确定其路由位置。当新增规则的条件集合 $C_{new}$ 与已有规则 $C_{old}$ 存在包含关系时：若 $C_{new} \supset C_{old}$，说明新规则引入了更严格的判定条件，系统在树中新增更深一层的分支节点，将细规则优先匹配；若 $C_{new} \subset C_{old}$，说明新规则覆盖范围更广，系统进行泛化调整以减少重复分支。上述处理避免了简单并存堆叠带来的路径膨胀。
+To support continuous evolution, we design incremental updates and conflict-resolution mechanisms. Given a new rule, we first normalize it using the same offline procedure and then determine its routing position. If the condition set $C_{new}$ of the new rule and $C_{old}$ of an existing rule have inclusion relationships, we handle them as follows: when $C_{new} \supset C_{old}$, the new rule has stricter conditions, so we add a deeper branch in the tree and give the fine-grained rule higher priority; when $C_{new} \subset C_{old}$, the new rule is more general, and we adjust the tree to generalize conditions and reduce duplicate branches. This avoids naive stacking of rules that would lead to path explosion.
 
-同时引入规则置信度进行质量控制：
+We further introduce rule confidence for quality control:
 \begin{equation}
 \mathrm{Conf}(r) = \alpha \cdot S_{evi}(r) + (1-\alpha) \cdot S_{time}(r)
 \end{equation}
-其中 $S_{evi}(r) = n_r / (n_r + k)$ 为证据支持度（$n_r$ 为支撑记录数，$k$ 为平滑常数，默认 $k{=}3$），$S_{time}(r) = 1 / (1 + (t_{now} - t_r)/T)$ 为时间新鲜度（$T{=}90$ 天，即规则更新 90 天后新鲜度降至 0.5）。当 $\mathrm{Conf}(r)$ 低于预设阈值时，规则仅作为低优先候选参与在线推理排序，并进入待人工审核队列；达到阈值时才被确认为可路由的高优先级叶节点证据，从而在增量更新中实现对知识质量与时效性的联合约束。
+where $S_{evi}(r) = n_r / (n_r + k)$ is evidence support (with $n_r$ being the number of supporting records and $k$ a smoothing constant, default $k{=}3$), and $S_{time}(r) = 1 / (1 + (t_{now} - t_r)/T)$ measures recency (with $T{=}90$ days, meaning the recency drops to 0.5 after 90 days). Rules whose confidence falls below a threshold are used only as low-priority candidates and placed in a queue for manual review; only those above the threshold become high-priority leaf evidence for routing. This mechanism jointly constrains knowledge quality and freshness during incremental evolution.
 
-\subsubsection{在线根因推理}
+\subsubsection{Online Root Cause Reasoning}
 
-在线推理阶段的目标是：给定一次构建失败任务的结构化输入，沿树形索引完成条件路由与历史经验召回，并在证据约束下生成可解释、可执行、可验证的根因分析与修复建议。本方法采用证据驱动的 ReAct 推理框架组织在线流程：以 MGSC 输出的日志语义压缩结果 $S$ 作为推理入口，将外部知识查询与树形索引检索封装为可调用工具，使模型在推理过程中以``行动$\to$观察$\to$再推理''的方式逐步补全适用前提并收敛到可用证据。
+In the online phase, given a build-failure case, the goal is to perform conditional routing and historical-experience retrieval along the rule tree, and then, under explicit evidence constraints, generate interpretable, actionable, and verifiable root cause analyses and fixes. We adopt a ReAct-style evidence-driven reasoning framework, using the MGSC summary $S$ as the entry, and encapsulating external knowledge queries and rule-tree retrieval as tools that the model can invoke. The model then iterates between ``acting'' and ``observing'' to gradually collect evidence and converge on applicable rules.
 
-\textbf{错误类型与阶段判定。}在线推理的第一步是判定本次失败属于哪一类错误、发生在构建流程的哪个阶段。系统以 MGSC 输出的压缩结果为入口，结果中已包含显式错误行、阶段相关线索、关键实体以及若干与错误相关的证据片段。阶段判定优先使用压缩结果中的显式字段；若未显式给出，则结合错误锚点附近的典型输出特征进行推断。错误类型判定以压缩结果中的错误锚点与关键实体为主要依据，系统查询预先定义的五大类错误标准及其典型触发条件，将当前错误现象映射到候选类别；同时，当压缩结果中出现与架构强相关的实体或模式时，调用 RISC-V 相关知识查询工具进行补充判断，以避免仅凭表面报错做出误判。
+\textbf{Error type and stage determination.} The first step is to determine the error category and build stage of the current failure. The MGSC summary $S$ already includes explicit error lines, stage-related clues, key entities, and several evidence snippets. If $S$ explicitly contains stage information, we use it directly; otherwise, we infer the stage based on typical patterns around error anchors. For error categories, we map error anchors and entities in $S$ to one of our five categories via a predefined standard and conditions. When $S$ reveals architecture-specific entities or patterns, we optionally call RISC-V knowledge tools for additional checks to avoid misclassification based solely on surface error messages.
 
-\textbf{相关历史修复经验查询。}完成错误类型与阶段判定后，系统进入树形索引检索环节。首先根据 \texttt{error\_type} 定位到对应的问题域节点，再根据 \texttt{build\_stage} 进入阶段子树，将候选空间限定在语义一致的局部范围内。进入阶段子树后，以压缩结果中的触发条件信息、关键实体等作为路由依据，与索引中各分支条件进行匹配。匹配过程采用自顶向下遍历：当线索能够明确满足某一分支条件时沿分支下行；当线索不足时保留该分支为候选以避免过早剪枝；当线索明确不满足时跳过该分支。当检索得到多个候选叶节点时，系统进行轻量排序：排序依据由条件匹配程度（触发条件与关键实体覆盖度）与规则置信度两类信号构成，排序后输出 Top-K 条修复规则作为候选证据集合。若未能命中任何叶节点，系统回退至更上层节点获取更泛化的规则集合。
+\textbf{Retrieving relevant historical repair experience.} After determining error type and stage, we query the rule tree. We first locate the problem-domain node according to \texttt{error\_type} and then enter the corresponding stage subtree according to \texttt{build\_stage}, restricting candidates to a semantically coherent region. Inside the stage subtree, we use triggers and key entities extracted from $S$ to match against branch conditions. We traverse top-down: when evidence clearly satisfies a branch, we follow it; when evidence is insufficient, we retain the branch as a candidate to avoid premature pruning; when evidence clearly contradicts a branch, we skip it. If multiple leaf nodes remain, we rank their rules by matching degree (coverage of triggers and entities) and rule confidence, and keep the Top-$K$ rules as candidate evidence. If no leaves are hit, we back off to higher-level nodes and fall back to more general rules.
 
-\textbf{基于 ReAct 范式的推理。}在获得召回的历史修复经验后，系统进入最终答案生成阶段。系统将三类信息注入上下文：其一是 MGSC 输出的压缩结果 $S$，提供关键显式错误、阶段线索与实体证据；其二是历史修复经验库的检索结果（排序后的 Top-K 修复规则）；其三是检索路径信息（问题大类、错误阶段、条件分支序列）。模型按 ReAct 流程进行推理：首先基于压缩结果与候选经验形成初步假设，若发现关键信息缺失或候选之间存在不一致，模型以``行动''的形式调用工具进行补充查询（如查询 RISC-V 相关知识或验证设想修复方案），工具返回作为``观察''结果写回上下文，模型据此修正假设并收敛。最终系统要求模型输出结构化诊断报告，包含：（1）关键错误信息与阶段定位；（2）错误类型判定及分类依据；（3）可复核的根因解释；（4）具体可执行的修复建议；（5）支撑证据集合与历史修复记录引用。若检索到多条候选经验且均具备一定合理性，系统输出主推荐与备选方案，并用 \texttt{trigger\_condition} 说明各自的适用边界，避免在证据冲突时给出不可验证的折中结论。
+\textbf{ReAct-style reasoning.} After retrieving candidate rules, we proceed to final answer generation. We pack three kinds of information into the LLM context: (1) the MGSC summary $S$, providing error anchors, stage clues, and entities; (2) retrieved historical rules (Top-$K$ candidates); and (3) routing path information (problem domain, stage, and branch sequence). Following the ReAct paradigm, the model first forms preliminary hypotheses based on $S$ and candidate rules. If it detects missing critical information or inconsistencies among candidates, it issues ``actions'' to call tools (e.g., RISC-V knowledge queries or validation of hypothetical fixes), uses their outputs as ``observations'', and then revises its hypotheses. Finally, the model is required to output a structured diagnostic report containing: (1) key error and stage localization; (2) error-type classification and rationale; (3) verifiable root cause explanation; (4) concrete, executable repair suggestions; and (5) supporting evidence and references to historical repairs. When multiple candidate rules remain plausible, the system outputs a primary recommendation and alternatives, each with its \texttt{trigger\_condition} specifying applicability boundaries, thus avoiding unverifiable compromises when evidence conflicts.
 
-%% ===== 第四章 实验评估 =====
-\section{实验评估}
+%% ===== Section 4 Evaluation =====
+\section{Evaluation}
 
-\subsection{实验设置}
+\subsection{Experimental Setup}
 
-\subsubsection{数据集}
-实验数据来自 OBS 真实生产环境下的 RISC\,-V 软件包构建失败日志。日志压缩实验使用 133 个不同软件包的构建日志，总计 149219 行日志文本，并由专家标注 4582 行关键修复相关日志行作为评测基准。根因分析实验使用 174 个典型构建失败案例，覆盖五种错误类型（架构兼容、编译配置、依赖配置、版本兼容、其他错误）。
+\subsubsection{Datasets}
+Our experimental data is drawn from RISC\,-V package build-failure logs in a real OBS production environment. For log compression, we use build logs of 133 different packages, totaling 149{,}219 log lines. Domain experts label 4{,}582 key repair-related lines as ground truth. For root cause analysis, we use 174 representative build-failure cases covering five error types (architecture compatibility, build configuration, dependency configuration, version compatibility, and other errors).
 
-如图~\ref{fig:dataset} 所示，数据集中版本兼容类错误占比最高（29.9\%），编译配置与依赖配置各占 23.6\%，其他错误 14.4\%，架构兼容 8.6\%。从构建阶段分布看，\texttt{\%build} 阶段占 50.0\%，\texttt{\%prep} 占 24.1\%，\texttt{\%check} 占 20.7\%，\texttt{\%install} 占 5.2\%。
+As shown in Figure~\ref{fig:dataset}, version-compatibility errors account for the largest proportion (29.9\%), while build-configuration and dependency-configuration errors each account for 23.6\%, other errors 14.4\%, and architecture-compatibility errors 8.6\%. Regarding build-stage distribution, 50.0\% of failures occur in \texttt{\%build}, 24.1\% in \texttt{\%prep}, 20.7\% in \texttt{\%check}, and 5.2\% in \texttt{\%install}.
 
 \begin{figure}[!htbp]
     \centering
     \includegraphics[width=\columnwidth]{pic/dataset-dist.png}
-    \caption{RISC\,-V 构建失败数据集错误类别与构建阶段分布}
+    \caption{Distribution of error categories and build stages in the RISC\,-V build-failure dataset}
     \label{fig:dataset}
 \end{figure}
 
-\subsubsection{基线方法}
-日志压缩实验选取三种基线：（1）LogSage\cite{r9}——面向长日志的 LLM 驱动分析框架；（2）TemplateRAG——模板化解析与检索增强方法；（3）LogPrompt\cite{r10}——通过提示工程增强 LLM 的日志分析能力。
+\subsubsection{Baselines}
+For log compression, we compare MGSC with three baselines: (1) LogSage~\cite{xu2025logsage}, an LLM-based analysis framework for long logs; (2) TemplateRAG~\cite{shuai2025root}, a template-based parsing and retrieval-augmented method; and (3) LogPrompt~\cite{liu2024logprompt}, which enhances LLM-based log analysis via prompt engineering.
 
-根因分析实验设置四类对比基线：（1）朴素 RAG Agent——基于语义相似度的经典检索增强生成；（2）LogSage\cite{r9}——改进的多路 RAG 检索增强；（3）MCTS——搜索式推理框架；（4）旗舰推理模型（Seed1.8、Kimi K2、DeepSeekV3.2）——以模型能力为主要提升来源的对照。
+For root cause analysis, we consider four classes of baselines: (1) a naive RAG agent based on semantic-similarity retrieval and generation; (2) LogSage~\cite{xu2025logsage}, which uses improved multi-path RAG retrieval; (3) MCTS~\cite{shuai2025root}, a search-based reasoning framework; and (4) flagship reasoning models (Seed1.8, Kimi K2, DeepSeekV3.2), which primarily rely on model capacity improvements.
 
-\subsubsection{评价指标}
-日志压缩以行级 Precision/Recall/F1 评估关键证据保留能力。根因分析采用综合得分函数：
+\subsubsection{Metrics}
+For log compression, we use line-level Precision/Recall/F1 to evaluate the preservation of key evidence. For root cause analysis, we adopt a composite score:
 \begin{equation}
 \text{score}(i) = \frac{s_i + c_i + r_i + f_i}{4}
 \end{equation}
-其中 $s_i$ 为关键错误语句提取得分，$c_i$ 为错误分类得分，$r_i$ 为根因解释得分，$f_i$ 为修复建议得分。
+where $s_i$ is the score for extracting key error statements, $c_i$ for error classification, $r_i$ for root cause explanation, and $f_i$ for repair suggestion.
 
-\subsection{日志压缩实验结果}
+\subsection{Results on Log Compression}
 
 \begin{table}[htbp]
 \centering
-\caption{日志压缩方法准确性对比}
+\caption{Accuracy comparison of log compression methods}
 \label{tab:mgsc-results}
 \begin{tabular}{lccc}
 \hline
-\textbf{方法} & \textbf{Prec} & \textbf{Rec} & \textbf{F1} \\
+\textbf{Method} & \textbf{Prec} & \textbf{Rec} & \textbf{F1} \\
 \hline
 LogPrompt & 0.260 & 0.300 & 0.334 \\
-TemplateRAG & 0.047 & 0.769 & 0.080 \\
-LogSage & 0.308 & 0.574 & 0.387 \\
-MGSC（本文） & \textbf{0.302} & \textbf{0.668} & \textbf{0.389} \\
+TemplateRAG & 0.047 & \textbf{0.769} & 0.080 \\
+LogSage & \textbf{0.308} & 0.574 & 0.387 \\
+MGSC (ours) & 0.302 & 0.668 & \textbf{0.389} \\
 \hline
 \end{tabular}
 \end{table}
 
-如表~\ref{tab:mgsc-results} 所示，MGSC 的 Recall 为 0.668，显著高于 LogSage（0.574），说明显式错误锚点粗筛与基于实体的回溯补全能够更有效地找回长程因果链上的关键线索。同时 MGSC 的 Precision 远高于 TemplateRAG（0.302 vs 0.047），表明在提升覆盖率的同时仍能抑制大量无关噪声。在性能方面，MGSC 在三组日志上的平均输出 token 为 3442/4234/5502，始终处于几千 token 量级，相比 TemplateRAG（38746/49883/55406）小一个数量级，为后续推理预留了充足上下文预算。运行耗时方面，MGSC 在超长日志下相比 LogPrompt 与 TemplateRAG 可实现约 2.3--3.6$\times$ 的加速。
+As shown in Table~\ref{tab:mgsc-results}, MGSC achieves a Recall of 0.668, significantly higher than LogSage (0.574), indicating that the combination of error-anchor-based coarse filtering and entity backtracking can more effectively recover key clues along long-range causal chains. At the same time, MGSC attains much higher Precision than TemplateRAG (0.302 vs. 0.047), showing that MGSC can suppress large amounts of irrelevant noise while improving coverage. In terms of efficiency, MGSC's average output tokens for three groups of logs are 3442/4234/5502, consistently at the scale of a few thousand tokens and one order of magnitude smaller than TemplateRAG (38746/49883/55406), leaving ample context budget for subsequent reasoning. Regarding runtime, MGSC achieves about 2.3--3.6$\times$ speedup over LogPrompt and TemplateRAG on ultra-long logs.
 
-\subsection{MGSC 消融实验}
+\subsection{Ablation Study on MGSC}
 
-为验证各模块贡献，对 MGSC 进行消融实验。
+We perform an ablation study to assess the contribution of each MGSC component.
 
 \begin{table}[htbp]
 \centering
-\caption{MGSC 消融实验结果}
+\caption{Ablation results of MGSC}
 \label{tab:mgsc-ablation}
 \begin{tabular}{lccc}
 \hline
-\textbf{配置} & \textbf{Prec} & \textbf{Rec} & \textbf{F1} \\
+\textbf{Configuration} & \textbf{Prec} & \textbf{Rec} & \textbf{F1} \\
 \hline
-MGSC（完整） & 0.302 & 0.668 & 0.389 \\
+MGSC (full) & 0.302 & 0.668 & 0.389 \\
 w/o Anchor Filter & 0.274 & 0.352 & 0.328 \\
 w/o Entity Backtracking & 0.292 & 0.584 & 0.372 \\
 w/o Semantic Compressor & 0.246 & 0.668 & 0.349 \\
@@ -302,33 +306,33 @@ w/o Semantic Compressor & 0.246 & 0.668 & 0.349 \\
 \end{tabular}
 \end{table}
 
-如表~\ref{tab:mgsc-ablation} 所示，去除错误锚点粗筛（w/o Anchor Filter）后 Recall 由 0.668 降至 0.352（$\downarrow$47.3\%），F1 下降 15.7\%，说明显式错误锚点定位对快速锁定异常区域具有决定性作用。去除实体回溯（w/o Entity Backtracking）时 Recall 与 F1 分别下降 12.6\% 和 4.4\%，表明该模块能有效补齐跨距离因果线索。去除语义压缩模型（w/o Semantic Compressor）后 Recall 不变而 Precision 下降 18.5\%，说明轻量语义压缩主要贡献在于提高输出纯度与结构化摘要的稳定性。
+As shown in Table~\ref{tab:mgsc-ablation}, removing error-anchor-based coarse filtering (w/o Anchor Filter) reduces Recall from 0.668 to 0.352 (a 47.3\% drop) and decreases F1 by 15.7\%, demonstrating that explicit anchor localization is crucial for quickly focusing on abnormal regions. Removing entity backtracking (w/o Entity Backtracking) reduces Recall and F1 by 12.6\% and 4.4\%, respectively, indicating that this module effectively recovers long-distance causal clues. Without the semantic compressor (w/o Semantic Compressor), Recall remains the same but Precision drops by 18.5\%, showing that the lightweight compressor mainly improves output purity and stability of the structured summaries.
 
-\subsection{根因分析实验结果}
+\subsection{Results on Root Cause Analysis}
 
 \begin{table}[htbp]
 \centering
-\caption{根因分析综合性能对比}
+\caption{Overall performance comparison on root cause analysis}
 \label{tab:hrl-results}
 \small
 \setlength{\tabcolsep}{3pt}
 \begin{tabular}{llccccc}
 \hline
-\textbf{分组} & \textbf{方法} & $s_i$ & $c_i$ & $r_i$ & $f_i$ & \textbf{Score} \\
+\textbf{Group} & \textbf{Method} & $s_i$ & $c_i$ & $r_i$ & $f_i$ & \textbf{Score} \\
 \hline
-\multirow{4}{*}{\rotatebox{90}{DeepSeekV3}}
+\multirow{4}{*}{{\footnotesize DeepSeekV3}}
 & RAG & 0.769 & 0.657 & 0.655 & 0.520 & 0.650 \\
 & LogSage & 0.870 & 0.754 & 0.692 & 0.524 & 0.710 \\
 & MCTS & 0.881 & 0.777 & 0.714 & 0.567 & 0.735 \\
 & HRL-RCA & \textbf{0.892} & \textbf{0.798} & \textbf{0.766} & \textbf{0.706} & \textbf{0.790} \\
 \hline
-\multirow{4}{*}{\rotatebox{90}{GPT-OSS}}
+\multirow{4}{*}{{\footnotesize GPT-OSS}}
 & RAG & 0.743 & 0.625 & 0.693 & 0.613 & 0.669 \\
 & LogSage & 0.791 & 0.699 & 0.721 & 0.606 & 0.704 \\
-& MCTS & 0.841 & 0.747 & 0.754 & 0.590 & 0.733 \\
-& HRL-RCA & \textbf{0.821} & \textbf{0.745} & \textbf{0.760} & \textbf{0.742} & \textbf{0.767} \\
+& MCTS & \textbf{0.841} & \textbf{0.747} & 0.754 & 0.590 & 0.733 \\
+& HRL-RCA & 0.821 & 0.745 & \textbf{0.760} & \textbf{0.742} & \textbf{0.767} \\
 \hline
-\multirow{3}{*}{\rotatebox{90}{旗舰模型}}
+\multirow{3}{*}{{\footnotesize \shortstack{Reasoning\\Models}}}
 & Seed 1.8 & 0.814 & 0.665 & 0.755 & 0.635 & 0.717 \\
 & Kimi K2 & 0.833 & 0.713 & 0.744 & 0.592 & 0.721 \\
 & DSV3.2 & 0.728 & 0.605 & 0.691 & 0.545 & 0.642 \\
@@ -336,42 +340,42 @@ w/o Semantic Compressor & 0.246 & 0.668 & 0.349 \\
 \end{tabular}
 \end{table}
 
-如表~\ref{tab:hrl-results} 所示，HRL-RCA 在两种基座下均取得最高综合得分。在 DeepSeekV3 基座下综合得分为 0.790，较最强基线 MCTS（0.735）提升 5.5\%，较朴素 RAG（0.650）提升 21.5\%。
+As shown in Table~\ref{tab:hrl-results}, HRL-RCA consistently achieves the best comprehensive scores across both backbone groups. With DeepSeekV3 as the backbone, HRL-RCA reaches an overall score of 0.790, outperforming the strongest baseline MCTS (0.735) by 5.5\% and the naive RAG agent (0.650) by 21.5\%.
 
 \begin{figure}[!htbp]
     \centering
-    \includegraphics[width=\columnwidth]{pic/4-3-2-1.png}
-    \caption{各方法分项得分对比}
+    \includegraphics[width=\columnwidth]{pic/HRL-RCA-exp.png}
+    \caption{Per-metric score comparison across methods}
     \label{fig:sub-scores}
 \end{figure}
 
-如图~\ref{fig:sub-scores} 所示，HRL-RCA 的优势主要体现在修复推荐与根因解释环节：在 DeepSeekV3 基座下修复推荐得分达到 0.706，相比 MCTS 的 0.567 提升 0.139，说明通过历史修复规则的条件路由与证据绑定，更容易在满足适用前提的情况下召回可执行修复依据。关键错误提取得分在各方法中整体较高（0.769--0.892），说明统一的日志语义压缩已提供较强的错误锚点，而 HRL-RCA 仍保持最高（0.892），体现出结构化推理路径对推理稳定性的促进作用。
+Figure~\ref{fig:sub-scores} shows that HRL-RCA's main advantages lie in repair recommendation and root cause explanation. With DeepSeekV3, HRL-RCA attains a repair-suggestion score of 0.706, surpassing MCTS (0.567) by 0.139. This indicates that conditional routing and evidence binding based on historical repair rules make it easier to recall executable fixes under satisfied preconditions. Scores for key-error extraction are relatively high across methods (0.769--0.892), suggesting that unified log compression already provides strong error anchors; HRL-RCA still yields the highest score (0.892), reflecting the stabilizing effect of structured reasoning paths.
 
-与独立旗舰推理模型基线相比，Seed1.8、Kimi K2 与 DeepSeekV3.2 的综合得分均低于 HRL-RCA，说明在构建失败这种强依赖适用前提与可验证证据的任务中，仅提升模型推理能力不足以稳定获得高质量修复建议，需要结构化的知识组织与证据约束机制。
+Compared with standalone flagship reasoning models, Seed1.8, Kimi K2, and DeepSeekV3.2 all perform worse than HRL-RCA. This suggests that for build failures, where applicability conditions and verifiable evidence are critical, merely increasing model capacity is insufficient to ensure high-quality repair suggestions; structured knowledge organization and evidence constraints are necessary.
 
-\subsection{效率分析}
+\subsection{Efficiency Analysis}
 
 \begin{figure}[!htbp]
     \centering
-    \includegraphics[width=\columnwidth]{pic/4-3-2-2.png}
-    \caption{各方法平均处理耗时对比}
+    \includegraphics[width=\columnwidth]{pic/HRL-RCA-exp-time.png}
+    \caption{Average processing time of different methods}
     \label{fig:efficiency}
 \end{figure}
 
-如图~\ref{fig:efficiency} 所示，HRL-RCA 在 DeepSeekV3 基座下平均耗时 101.80s，相比 MCTS 的 261.23s 减少约 61.0\%，与 LogSage（86.93s）基本持平。朴素 RAG 耗时最短（32.64s），但准确性显著不足。MCTS 因多轮搜索式推理导致耗时最长，而 HRL-RCA 通过规则路由将候选空间限制在局部范围，避免了全局搜索的开销，在保持最优准确性的同时兼顾了工程可用性。
+As shown in Figure~\ref{fig:efficiency}, with DeepSeekV3 as the backbone, HRL-RCA has an average runtime of 101.80s, reducing processing time by about 61.0\% compared with MCTS (261.23s) and being comparable to LogSage (86.93s). The naive RAG baseline is the fastest (32.64s) but yields significantly lower accuracy. MCTS is the slowest due to multi-round search-based reasoning, whereas HRL-RCA constrains candidate space via rule routing, avoiding the overhead of global search and achieving the best overall accuracy while remaining practically efficient.
 
-%% ===== 总结与展望 =====
-\section{总结与展望}
+%% ===== Section 5 Conclusion and Future Work =====
+\section{Conclusion and Future Work}
 
-本文面向 RISC\,-V 软件包构建失败场景，提出``日志压缩 + 规则学习''的两阶段根因分析方法。第一阶段 MGSC 通过显式错误锚点定位、基于实体的跨距离上下文回溯与轻量模型语义压缩，在严格 token 预算下保留高保真证据链，显著降低长日志输入规模。第二阶段 HRL-RCA 将历史修复经验结构化为可判定规则并组织为树形索引，在线推理时通过条件路由召回满足前提的规则，在证据约束下生成可追溯的根因分析与修复建议。
+This paper targets build failures in RISC\,-V package migration and proposes a two-stage root cause analysis method that combines log compression with rule learning. In the first stage, MGSC uses explicit error anchor localization, entity-based long-distance context backtracking, and lightweight semantic compression to preserve high-fidelity evidence chains under strict token budgets, significantly reducing long-log input size. In the second stage, HRL-RCA structures historical repair experience into verifiable rules organized as a rule tree and uses conditional routing during online inference to retrieve rules whose preconditions hold, generating traceable root cause analyses and repair suggestions under explicit evidence constraints.
 
-实验结果表明，MGSC 在关键证据覆盖率上优于现有压缩方法，且输出 token 规模稳定可控；HRL-RCA 在综合诊断得分上达到 79.0\%，显著超过朴素 RAG、多路检索增强与搜索式推理等基线，同时处理耗时较 MCTS 降低 61\%，在效率上亦具有明显优势。未来工作将进一步完善规则知识库的增量更新与去重机制，探索将方法适配到更多架构与构建系统，并开发面向开发者的 IDE 插件等工具以促进工程落地。
+Experimental results show that MGSC achieves higher coverage of key evidence than existing compression methods while keeping output token size stable and controllable. HRL-RCA attains a comprehensive diagnostic score of 79.0\%, significantly outperforming naive RAG, multi-path retrieval-augmented methods, and search-based reasoning baselines, while reducing runtime by 61\% compared with MCTS, thus offering clear advantages in both effectiveness and efficiency. Future work will further improve incremental updates and deduplication for the rule knowledge base, explore adapting the method to more architectures and build systems, and develop IDE plugins and other developer tools to facilitate adoption in real-world engineering workflows.
 
 %%
 %% Acknowledgments
 %%
 \begin{acks}
-本工作得到中国科学院软件研究所等相关项目的支持。
+This work was supported in part by projects of the Institute of Software, Chinese Academy of Sciences, among others.
 \end{acks}
 
 %%
@@ -381,4 +385,3 @@ w/o Semantic Compressor & 0.246 & 0.668 & 0.349 \\
 \bibliography{reference}
 
 \end{document}
-
