@@ -243,9 +243,9 @@ To complete long-range causal chains, Step-2 extracts backtrackable query elemen
 
 Using the entity set $E$ as queries, we search the original log $L$ for related segments. For each line $l_j$, we define a backtracking value:
 \begin{equation}
-V(l_j) = \max_{e \in E}\left(\mathrm{Sim}(l_j, e) \cdot \frac{1}{\log(1 + \lambda \Delta t(l_j, e))}\right)
+V(l_j) = \max_{e \in E}\left(\mathrm{Sim}(l_j, e) \cdot \frac{1}{\log(1 + \mu \Delta t(l_j, e))}\right)
 \end{equation}
-where $\mathrm{Sim}$ denotes fuzzy matching similarity (supporting substring matches, case-insensitive matches, and small edit distances), and the distance term biases toward closer lines when similarities are comparable. Lines whose values exceed a threshold are selected and aggregated into backtracking segments, thereby filling in causal evidence scattered across build stages. For example, when an explicit error reports \texttt{undefined reference to `foo\_v\_probe'}, entity backtracking may locate, in earlier \texttt{configure} stages, lines like \texttt{checking for foo\_v\_probe... no} and the corresponding compilation failures in \texttt{config.log}, thus bridging configuration-probing failures and link-time errors.
+where $\mathrm{Sim}$ denotes fuzzy matching similarity (supporting substring matches, case-insensitive matches, and small edit distances), and $\mu$ is a distance decay coefficient controlling how strongly larger distances are penalized. In the OBS build-log scenario, we set $\mu=0.001$, which yields a mild penalty within hundreds of lines while introducing noticeable decay at distances beyond thousands of lines, balancing the recall needs for both near-cause and far-cause evidence. Lines whose values exceed a threshold are selected and aggregated into backtracking segments, thereby filling in causal evidence scattered across build stages. For example, when an explicit error reports \texttt{undefined reference to `foo\_v\_probe'}, entity backtracking may locate, in earlier \texttt{configure} stages, lines like \texttt{checking for foo\_v\_probe... no} and the corresponding compilation failures in \texttt{config.log}, thus bridging configuration-probing failures and link-time errors.
 
 \subsubsection{Fine-Grained Semantic Summarization}
 
@@ -301,9 +301,15 @@ To support continuous evolution, we design incremental updates and conflict-reso
 
 We further introduce rule confidence for quality control:
 \begin{equation}
-\mathrm{Conf}(r) = \alpha \cdot S_{evi}(r) + (1-\alpha) \cdot S_{time}(r)
+\mathrm{Conf}(r) = S_{evi}(r) + S_{time}(r)
 \end{equation}
-where $S_{evi}(r) = n_r / (n_r + k)$ is evidence support (with $n_r$ being the number of supporting records and $k$ a smoothing constant, default $k{=}3$), and $S_{time}(r) = 1 / (1 + (t_{now} - t_r)/T)$ measures recency (with $T{=}90$ days, meaning the recency drops to 0.5 after 90 days). Rules whose confidence falls below a threshold are used only as low-priority candidates and placed in a queue for manual review; only those above the threshold become high-priority leaf evidence for routing. This mechanism jointly constrains knowledge quality and freshness during incremental evolution.
+where $S_{evi}(r) = n_r / (n_r + k)$ is evidence support (with $n_r$ being the number of supporting records and $k$ a smoothing constant, default $k{=}3$), and $S_{time}(r) = 1 / (1 + (t_{now} - t_r)/T)$ measures recency (with $T{=}90$ days, meaning the recency drops to 0.5 after 90 days).
+
+\textbf{Interpretation of $k$.} Here $k>0$ is a smoothing constant that controls the saturation speed of evidence support. When $n_r = k$, we have $S_{evi}(r)=0.5$. Thus, $k$ can be interpreted as the evidence-count ``half-confidence point'': a rule needs roughly $k$ historical repair records to reach a medium credibility level. In our knowledge base, we collect about 600 rules and about 2{,}000 associated repair records. Statistics show that about 65\% of the rules are supported by only 1--2 repair records (long-tail rules), about 20\% are supported by 3--5 records, and the remaining 15\% have more than 5 records, representing repeatedly validated, high-frequency stable rules. Accordingly, long-tail rules should receive lower confidence, high-frequency rules should receive higher confidence, and the middle group should lie in a transition zone. We set $k=3$ to both avoid over-estimating confidence for single-evidence rules and emphasize stable experience supported by multiple records. Under this setting, a long-tail rule with $n_r=1$ has $S_{evi}=0.25$, reaching $0.5$ at $n_r=3$, increasing to $0.625$ at $n_r=5$, and to about $0.77$ at $n_r=10$, yielding a clear, graded distinction among the three rule groups.
+
+\textbf{Interpretation of $T$.} Here $T>0$ is a time-scale parameter that controls the decay rate of recency, and its value should match the version-iteration cycle of the build ecosystem. In openEuler and similar RISC-V-oriented distributions, major LTS releases are published roughly every two years, while service packs and innovation releases are updated every six months; each update may involve toolchain upgrades and dependency adjustments, which can render part of the existing repair experience inapplicable. We adopt $T=90$ days as the default value, i.e., half of the six-month release cycle. With this setting, a rule maintains relatively high freshness within 90 days after its last update, and decays to about 0.33 by the time of the next version update, thereby gradually lowering the priority of long-unverified rules before a new release and reducing the risk of outdated experience misleading the analysis.
+
+Rules whose confidence falls below a threshold are used only as low-priority candidates and placed in a queue for manual review; only those above the threshold become high-priority leaf evidence for routing. This mechanism jointly constrains knowledge quality and freshness during incremental evolution.
 
 \subsubsection{Online Root Cause Reasoning}
 
@@ -350,6 +356,8 @@ For root cause analysis, we include four baseline groups: (1) naive RAG with sem
 
 \subsubsection{Implementation Details}
 For Unravel and comparable baselines, we use DeepSeekV3 and GPT-OSS as backbones. Standalone reasoning models are evaluated end-to-end using Stage-1 structured extraction outputs as inputs. The Stage-1 extractor is fine-tuned from Qwen3-4B-Instruct with LoRA-based parameter-efficient tuning (Section~\ref{sec:ceel}). The rule-tree knowledge base is built offline from historical OBS repair commits using the pipeline in Section~\ref{sec:hrl}.
+
+\textbf{Hyperparameter settings.} For the line-level scoring function used to filter candidate log blocks, we adopt an independent tuning set and conduct a grid search with F1 as the optimization objective to determine the parameter values. In the OBS build-log scenario for RISC-V, we finally set $\alpha=0.6$, $\beta=0.3$, $\gamma=0.1$, and $\lambda=2$.
 
 \subsubsection{Metrics}
 \begin{sloppypar}
